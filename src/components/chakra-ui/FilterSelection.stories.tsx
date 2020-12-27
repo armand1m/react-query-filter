@@ -1,7 +1,7 @@
 import React from 'react';
 import { Meta, Story } from '@storybook/react';
-import { PropertyDescription } from './types';
-import { FilterSelection } from '.';
+import { PropertyDescription } from '../../types';
+import { FilterSelection } from './FilterSelection';
 
 const meta: Meta = {
   title: 'Filter Selection',

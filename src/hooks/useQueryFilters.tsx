@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useList } from 'react-use';
-import { shouldRenderValueInputForOperation } from './filterOperations';
-import { Filter, FilterRowProps, PropertyDescription } from './types';
+import { shouldRenderValueInputForOperation } from '../filterOperations';
+import { Filter, FilterRowProps, PropertyDescription } from '../types';
 
 export const useQueryFilters = (properties: PropertyDescription[]) => {
   const [filters, filterActions] = useList<Filter>([]);

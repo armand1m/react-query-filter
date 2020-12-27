@@ -92,3 +92,10 @@ export const shouldRenderValueInputForOperation = (
   const noInputOperations = ['is-empty', 'is-not-empty'];
   return !noInputOperations.includes(operationKey);
 };
+
+export const useRowUtilities = () => {
+  return {
+    getFilterOperationsForType,
+    shouldRenderValueInputForOperation,
+  };
+};
