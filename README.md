@@ -218,7 +218,7 @@ const properties: PropertyDescription[] = [
   },
 ];
 
-<FilterSelection properties={properties}>
+<FilterSelection properties={properties} />
 ```
 
 <div style="max-width: 700px">
