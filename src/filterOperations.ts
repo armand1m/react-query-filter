@@ -5,30 +5,30 @@ export interface FilterOperation {
 
 export const stringFilterOperations: FilterOperation[] = [
   {
-    value: "contains",
-    label: "contains..."
+    value: 'contains',
+    label: 'contains...',
   },
   {
-    value: "does-not-contain",
-    label: "does not contain..."
+    value: 'does-not-contain',
+    label: 'does not contain...',
   },
   {
-    value: "is",
-    label: "is..."
+    value: 'is',
+    label: 'is...',
   },
   {
-    value: "is-not",
-    label: "is not..."
+    value: 'is-not',
+    label: 'is not...',
   },
   {
-    value: "is-empty",
-    label: "is empty..."
+    value: 'is-empty',
+    label: 'is empty...',
   },
   {
-    value: "is-not-empty",
-    label: "is not empty..."
+    value: 'is-not-empty',
+    label: 'is not empty...',
   },
-]
+];
 
 export const numberOperations: FilterOperation[] = [
   {
@@ -56,24 +56,24 @@ export const numberOperations: FilterOperation[] = [
     label: '<=',
   },
   {
-    value: "is-empty",
-    label: "is empty..."
+    value: 'is-empty',
+    label: 'is empty...',
   },
   {
-    value: "is-not-empty",
-    label: "is not empty..."
+    value: 'is-not-empty',
+    label: 'is not empty...',
   },
-]
+];
 
 const booleanOperations: FilterOperation[] = [
   {
-    value: "is",
-    label: "is..."
+    value: 'is',
+    label: 'is...',
   },
-]
+];
 
 export const filterOperations = {
-  "string": stringFilterOperations,
-  "number": numberOperations,
-  "boolean": booleanOperations
-}
+  string: stringFilterOperations,
+  number: numberOperations,
+  boolean: booleanOperations,
+};
