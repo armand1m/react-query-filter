@@ -77,3 +77,18 @@ export const filterOperations = {
   number: numberOperations,
   boolean: booleanOperations,
 };
+
+export type SupportedFieldType = keyof typeof filterOperations;
+
+export const getFilterOperationsForType = (
+  fieldType: SupportedFieldType = 'string'
+) => {
+  return filterOperations[fieldType];
+};
+
+export const shouldRenderValueInputForOperation = (
+  operationKey: string = ''
+) => {
+  const noInputOperations = ['is-empty', 'is-not-empty'];
+  return !noInputOperations.includes(operationKey);
+};
