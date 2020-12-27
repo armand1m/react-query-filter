@@ -8,9 +8,26 @@ This library ships a `useQueryFilters` hook that you can use to implement an UI 
 
 The `useQueryFilters` will track state changes and enable you do build your query filter builder using the styles you want.
 
+ - [Features](#features)
  - [Signature](#signature)
  - [Usage](#usage)
  - [License](#license)
+
+## Features
+
+ - [x] Fully headless: Bring your own UI
+ - [x] Conditional operations based on field type
+    - [x] Strings
+    - [x] Numbers
+    - [x] Boolean
+    - [ ] Dates
+    - [ ] Single Select
+    - [ ] Multiple Select
+ - [x] Conditional value based on operation type
+    - Value is always undefined if operation type is `is-empty` or `is-not-empty`
+ - [x] `AND` & `OR` logic gates supported
+ - [ ] Support for controlled state
+ - [ ] Support for nested conditions
 
 ## Signature
 
