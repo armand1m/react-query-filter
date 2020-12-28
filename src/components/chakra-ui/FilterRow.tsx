@@ -52,7 +52,7 @@ export const FilterRow: FC<FilterRowProps> = ({
         placeholder="Field"
       >
         {properties.map((prop, index) => (
-          <option value={prop.key} key={`${prop.key}-${index}`}>
+          <option value={prop.key} key={index}>
             {prop.label}
           </option>
         ))}

@@ -4,7 +4,7 @@ import { PropertyDescription } from '../../types';
 import { FilterSelection } from './FilterSelection';
 
 const meta: Meta = {
-  title: 'Filter Selection',
+  title: 'Chakra UI/Filter Selection',
   component: FilterSelection,
   parameters: {
     controls: { expanded: true },
