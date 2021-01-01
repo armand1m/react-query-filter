@@ -1,4 +1,6 @@
-import { SupportedFieldType } from './filterOperations';
+import { Binding } from './bindings';
+import { OperationType } from './operations';
+import { SelectOption } from './select-option';
 
 interface StringPropertyDescription {
   label: string;
@@ -27,16 +29,20 @@ export type PropertyDescription =
 
 export interface Filter {
   field?: string;
-  operation?: string;
+  operation?: OperationType;
   value?: string;
-  binding?: 'and' | 'or';
-  type?: SupportedFieldType;
+  binding?: Binding;
+  type?: PropertyDescription['type'];
 }
 
 export interface FilterRowProps {
-  properties: PropertyDescription[];
   filter: Filter;
-  isFirst: boolean;
+  fields: SelectOption<string>[];
+  bindings: SelectOption<Binding>[];
+  operations: SelectOption<OperationType>[];
+  shouldRenderBindingSelect: boolean;
+  shouldRenderValueInput: boolean;
+  getFieldSelectOption: (field: string) => SelectOption<string> | undefined;
   onRemove: () => void;
   onChangeBinding: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   onChangeField: (event: React.ChangeEvent<HTMLSelectElement>) => void;

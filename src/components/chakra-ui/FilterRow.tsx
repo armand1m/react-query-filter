@@ -7,41 +7,46 @@ import {
   Select,
   Tooltip,
 } from '@chakra-ui/react';
-import { useRowUtilities, FilterRowProps } from '../../';
+import { FilterRowProps } from '../../';
 
 export const FilterRow: FC<FilterRowProps> = ({
-  properties,
   filter,
-  isFirst,
+  fields,
+  bindings,
+  operations,
+  shouldRenderBindingSelect,
+  shouldRenderValueInput,
   onRemove,
   onChangeBinding,
   onChangeField,
   onChangeOperation,
   onChangeValue,
 }) => {
-  const {
-    getFilterOperationsForType,
-    shouldRenderValueInputForOperation,
-  } = useRowUtilities();
-
   return (
     <HStack>
       <Tooltip shouldWrapChildren label="Remove Filter" placement="left">
         <CloseButton onClick={onRemove} />
       </Tooltip>
 
-      {isFirst ? (
-        <Text fontSize="sm">Where&nbsp;</Text>
-      ) : (
+      {shouldRenderBindingSelect ? (
         <Select
           size="sm"
           maxWidth="6rem"
           value={filter.binding}
           onChange={onChangeBinding}
         >
-          <option value="and">And</option>
-          <option value="or">Or</option>
+          {bindings.map(binding => (
+            <option
+              value={binding.value}
+              key={binding.value}
+              selected={filter.binding === binding.value}
+            >
+              {binding.label}
+            </option>
+          ))}
         </Select>
+      ) : (
+        <Text fontSize="sm">Where&nbsp;</Text>
       )}
 
       <Select
@@ -50,9 +55,13 @@ export const FilterRow: FC<FilterRowProps> = ({
         onChange={onChangeField}
         placeholder="Field"
       >
-        {properties.map((prop, index) => (
-          <option value={prop.key} key={index}>
-            {prop.label}
+        {fields.map(field => (
+          <option
+            value={field.value}
+            key={field.value}
+            selected={filter.field === field.value}
+          >
+            {field.label}
           </option>
         ))}
       </Select>
@@ -63,14 +72,18 @@ export const FilterRow: FC<FilterRowProps> = ({
         onChange={onChangeOperation}
         placeholder="Operation"
       >
-        {getFilterOperationsForType(filter.type).map((operation, index) => (
-          <option value={operation.value} key={index}>
+        {operations.map(operation => (
+          <option
+            value={operation.value}
+            key={operation.value}
+            selected={filter.operation === operation.value}
+          >
             {operation.label}
           </option>
         ))}
       </Select>
 
-      {shouldRenderValueInputForOperation(filter.operation) && (
+      {shouldRenderValueInput && (
         <Input
           size="sm"
           placeholder="Value"

@@ -10,9 +10,9 @@ interface Props {
 }
 
 export const FilterSelection: FC<Props> = ({ properties }) => {
-  const { filters, onAddFilter, createFilterRowProps } = useQueryFilters(
-    properties
-  );
+  const { filters, onAddFilter, createFilterRowProps } = useQueryFilters({
+    properties,
+  });
 
   return (
     <SimpleGrid columns={1} spacingY={4}>
