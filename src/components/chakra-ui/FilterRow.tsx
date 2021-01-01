@@ -7,8 +7,7 @@ import {
   Select,
   Tooltip,
 } from '@chakra-ui/react';
-import { useRowUtilities } from '../../filterOperations';
-import { FilterRowProps } from '../../types';
+import { useRowUtilities, FilterRowProps } from '../../';
 
 export const FilterRow: FC<FilterRowProps> = ({
   properties,

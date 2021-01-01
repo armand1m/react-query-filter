@@ -24,7 +24,7 @@ The `useQueryFilters` will track state changes and enable you do build your quer
     - [ ] Single Select
     - [ ] Multiple Select
  - [x] Conditional value based on operation type
-    - Value is always undefined if operation type is `is-empty` or `is-not-empty`
+    - Condition value is always `undefined` if operation type is `is-empty` or `is-not-empty`
  - [x] `AND` & `OR` logic gates supported
  - [ ] Support for controlled state
  - [ ] Support for nested conditions

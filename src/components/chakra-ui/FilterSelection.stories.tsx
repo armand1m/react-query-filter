@@ -1,6 +1,6 @@
 import React from 'react';
 import { Meta, Story } from '@storybook/react';
-import { PropertyDescription } from '../../types';
+import { PropertyDescription } from '../../';
 import { FilterSelection } from './FilterSelection';
 
 const meta: Meta = {

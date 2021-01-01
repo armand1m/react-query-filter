@@ -1,6 +1,6 @@
 import React from 'react';
 import { Meta, Story } from '@storybook/react';
-import { FilterRowProps, PropertyDescription } from '../../types';
+import { FilterRowProps, PropertyDescription } from '../../';
 import { FilterRow } from './FilterRow';
 
 const properties: PropertyDescription[] = [

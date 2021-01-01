@@ -1,11 +1,10 @@
 {
-  "version": "0.1.0",
+  "version": "0.0.0-development",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "engines": {
     "node": ">=10"
@@ -19,7 +18,9 @@
     "size": "size-limit",
     "analyze": "size-limit --why",
     "storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook"
+    "build-storybook": "build-storybook",
+    "pack:inspect": "yarn pack && tar -ztvf *.tgz",
+    "semantic-release": "semantic-release"
   },
   "peerDependencies": {
     "@chakra-ui/react": "^1.0.4",
@@ -39,16 +40,16 @@
     "singleQuote": true,
     "trailingComma": "es5"
   },
-  "name": "use-query-filters",
+  "name": "react-query-filter",
   "author": "Armando Magalhães",
-  "module": "dist/use-query-filters.esm.js",
+  "module": "dist/react-query-filter.esm.js",
   "size-limit": [
     {
-      "path": "dist/use-query-filters.cjs.production.min.js",
+      "path": "dist/react-query-filter.cjs.production.min.js",
       "limit": "10 KB"
     },
     {
-      "path": "dist/use-query-filters.esm.js",
+      "path": "dist/react-query-filter.esm.js",
       "limit": "10 KB"
     }
   ],
@@ -64,8 +65,10 @@
     "@storybook/addon-links": "^6.1.11",
     "@storybook/addons": "^6.1.11",
     "@storybook/react": "^6.1.11",
+    "@testing-library/react-hooks": "^3.7.0",
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
+    "@types/react-select": "^3.0.28",
     "babel-loader": "^8.2.2",
     "framer-motion": "^3.1.1",
     "husky": "^4.3.6",
@@ -73,11 +76,17 @@
     "react-dom": "^17.0.1",
     "react-is": "^17.0.1",
     "react-select": "^3.1.1",
-    "react-use": "^15.3.4",
+    "semantic-release": "^17.3.1",
     "size-limit": "^4.9.1",
     "tsdx": "^0.14.1",
     "tslib": "^2.0.3",
     "typescript": "^4.1.3"
   },
-  "dependencies": {}
+  "dependencies": {
+    "react-use": "^15.3.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/armand1m/react-query-filter.git"
+  }
 }

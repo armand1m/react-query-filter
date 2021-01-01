@@ -1,7 +1,6 @@
 import React, { FC } from 'react';
 import { Button, HStack, SimpleGrid, SlideFade, Code } from '@chakra-ui/react';
-import { Filter, PropertyDescription } from '../../types';
-import { useQueryFilters } from '../../hooks/useQueryFilters';
+import { useQueryFilters, Filter, PropertyDescription } from '../../';
 import { FilterRow } from './FilterRow';
 
 interface Props {
