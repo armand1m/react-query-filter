@@ -88,5 +88,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/armand1m/react-query-filter.git"
+  },
+  "release": {
+    "branches": ["main"]
   }
 }
