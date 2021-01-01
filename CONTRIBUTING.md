@@ -152,7 +152,10 @@ For vanilla CSS, you can include it at the root directory and add it to the `fil
 
 ## Publishing to NPM
 
-We recommend using [np](https://github.com/sindresorhus/np).
+This project has `semantic-release` setup, so there is no manual publish.
+
+Stick to the conventional commit standard when contributing with changes. Your PR will be squashed as well.
+This is used to bump according to semantic versioning, setup the release on github and to write changes to the changelog.
 
 ## Usage with Lerna
 

@@ -25,30 +25,79 @@ The `useQueryFilters` will track state changes and enable you do build your quer
     - [ ] Multiple Select
  - [x] Conditional value based on operation type
     - Condition value is always `undefined` if operation type is `is-empty` or `is-not-empty`
- - [x] `AND` & `OR` logic gates supported
+ - [x] `AND` & `OR` logic gates supported, implemented as the `Binding` enum
  - [ ] Support for controlled state
  - [ ] Support for nested conditions
 
-## Signature
+## Types
 
 ```tsx
+interface StringPropertyDescription {
+  label: string;
+  key: string;
+  type: 'string';
+  suggestions?: string[];
+}
+
+interface NumberPropertyDescription {
+  label: string;
+  key: string;
+  type: 'number';
+  suggestions?: number[];
+}
+
+interface BooleanPropertyDescription {
+  label: string;
+  key: string;
+  type: 'boolean';
+}
+
 type PropertyDescription =
   | StringPropertyDescription
   | NumberPropertyDescription
   | BooleanPropertyDescription;
-
-interface Filter {
-  field?: string;
-  operation?: string;
-  value?: string;
-  binding?: 'and' | 'or';
-  type?: SupportedFieldType;
+  
+export enum Binding {
+  AND = 'AND',
+  OR = 'OR',
 }
 
-interface FilterRowProps {
-  properties: PropertyDescription[];
+export enum OperationType {
+  CONTAINS = 'CONTAINS',
+  DOES_NOT_CONTAIN = 'DOES_NOT_CONTAIN',
+  IS = 'IS',
+  IS_NOT = 'IS_NOT',
+  IS_EMPTY = 'IS_EMPTY',
+  IS_NOT_EMPTY = 'IS_NOT_EMPTY',
+  EQUAL = 'EQUAL',
+  NOT_EQUAL = 'NOT_EQUAL',
+  BIGGER_THAN = 'BIGGER_THAN',
+  LOWER_THAN = 'LOWER_THAN',
+  BIGGER_OR_EQUAL_THAN = 'BIGGER_OR_EQUAL_THAN',
+  LOWER_OR_EQUAL_THAN = 'LOWER_OR_EQUAL_THAN',
+}
+
+export interface Filter {
+  field?: string;
+  operation?: OperationType;
+  value?: string;
+  binding?: Binding;
+  type?: PropertyDescription['type'];
+}
+
+export interface SelectOption<T> {
+  label: string;
+  value: T;
+}
+
+export interface FilterRowProps {
   filter: Filter;
-  isFirst: boolean;
+  fields: SelectOption<string>[];
+  bindings: SelectOption<Binding>[];
+  operations: SelectOption<OperationType>[];
+  shouldRenderBindingSelect: boolean;
+  shouldRenderValueInput: boolean;
+  getFieldSelectOption: (field: string) => SelectOption<string> | undefined;
   onRemove: () => void;
   onChangeBinding: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   onChangeField: (event: React.ChangeEvent<HTMLSelectElement>) => void;
@@ -56,7 +105,14 @@ interface FilterRowProps {
   onChangeValue: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const useQueryFilters: (properties: PropertyDescription[]) => {
+interface HookProps {
+  properties: PropertyDescription[];
+  operationLabels?: Record<OperationType, string>;
+  typeOperationsMap?: Record<string, OperationType[]>;
+  noValueOperations?: OperationType[];
+}
+
+const useQueryFilters: (props: HookProps) => {
   filters: Filter[];
   onAddFilter: () => void;
   createFilterRowProps: (index: number) => FilterRowProps;
@@ -73,8 +129,8 @@ First, make sure you have the following dependencies in place:
 # install chakra and dependencies
 yarn add @chakra-ui/react @emotion/react @emotion/styled framer-motion
 
-# install react-query-filters
-yarn add react-query-filters
+# install react-query-filter
+yarn add react-query-filter
 ```
 
 ```tsx
@@ -97,9 +153,9 @@ interface Props {
 }
 
 export const FilterSelection: FC<Props> = ({ properties }) => {
-  const { filters, onAddFilter, createFilterRowProps } = useQueryFilters(
+  const { filters, onAddFilter, createFilterRowProps } = useQueryFilters({
     properties
-  );
+  });
 
   return (
     <SimpleGrid columns={1} spacingY={4}>
@@ -127,7 +183,7 @@ export const FilterSelection: FC<Props> = ({ properties }) => {
 
 ```tsx
 /** FilterRow.tsx */
-import React, { FC } from 'react';
+import React from 'react';
 import {
   CloseButton,
   Text,
@@ -136,83 +192,94 @@ import {
   Select,
   Tooltip,
 } from '@chakra-ui/react';
-import { FilterRowProps, useRowUtilities } from 'react-query-filters';
+import { FilterRowProps } from 'react-query-filters';
 
-export const FilterRow: FC<FilterRowProps> = ({
-  properties,
+export const FilterRow: React.FC<FilterRowProps> = ({
   filter,
-  isFirst,
+  fields,
+  bindings,
+  operations,
+  shouldRenderBindingSelect,
+  shouldRenderValueInput,
   onRemove,
   onChangeBinding,
   onChangeField,
   onChangeOperation,
   onChangeValue,
-}) => {
-  const {
-    getFilterOperationsForType,
-    shouldRenderValueInputForOperation,
-  } = useRowUtilities();
+}) => (
+  <HStack>
+    <Tooltip shouldWrapChildren label="Remove Filter" placement="left">
+      <CloseButton onClick={onRemove} />
+    </Tooltip>
 
-  return (
-    <HStack>
-      <Tooltip shouldWrapChildren label="Remove Filter" placement="left">
-        <CloseButton onClick={onRemove} />
-      </Tooltip>
+    {shouldRenderBindingSelect ? (
+      <Select
+        size="sm"
+        maxWidth="6rem"
+        value={filter.binding}
+        onChange={onChangeBinding}
+      >
+        {bindings.map(binding => (
+          <option
+            value={binding.value}
+            key={binding.value}
+            selected={filter.binding === binding.value}
+          >
+            {binding.label}
+          </option>
+        ))}
+      </Select>
+    ) : (
+      <Text fontSize="sm">Where&nbsp;</Text>
+    )}
 
-      {isFirst ? (
-        <Text fontSize="sm">Where&nbsp;</Text>
-      ) : (
-        <Select
-          size="sm"
-          maxWidth="6rem"
-          value={filter.binding}
-          onChange={onChangeBinding}
+    <Select
+      size="sm"
+      value={filter.field}
+      onChange={onChangeField}
+      placeholder="Field"
+    >
+      {fields.map(field => (
+        <option
+          value={field.value}
+          key={field.value}
+          selected={filter.field === field.value}
         >
-          <option value="and">And</option>
-          <option value="or">Or</option>
-        </Select>
-      )}
+          {field.label}
+        </option>
+      ))}
+    </Select>
 
-      <Select
+    <Select
+      size="sm"
+      value={filter.operation}
+      onChange={onChangeOperation}
+      placeholder="Operation"
+    >
+      {operations.map(operation => (
+        <option
+          value={operation.value}
+          key={operation.value}
+          selected={filter.operation === operation.value}
+        >
+          {operation.label}
+        </option>
+      ))}
+    </Select>
+
+    {shouldRenderValueInput && (
+      <Input
         size="sm"
-        value={filter.field}
-        onChange={onChangeField}
-        placeholder="Field"
-      >
-        {properties.map((prop, index) => (
-          <option value={prop.key} key={index}>
-            {prop.label}
-          </option>
-        ))}
-      </Select>
-
-      <Select
-        size="sm"
-        value={filter.operation}
-        onChange={onChangeOperation}
-        placeholder="Operation"
-      >
-        {getFilterOperationsForType(filter.type).map((operation, index) => (
-          <option value={operation.value} key={index}>
-            {operation.label}
-          </option>
-        ))}
-      </Select>
-
-      {shouldRenderValueInputForOperation(filter.operation) && (
-        <Input
-          size="sm"
-          placeholder="Value"
-          value={filter.value ?? ''}
-          onChange={onChangeValue}
-        />
-      )}
-    </HStack>
-  );
-};
+        placeholder="Value"
+        value={filter.value ?? ''}
+        onChange={onChangeValue}
+      />
+    )}
+  </HStack>
+);
 ```
 
-This component can the be used like this:
+This component can then be used like this:
 
 ```tsx
 const properties: PropertyDescription[] = [
