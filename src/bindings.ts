@@ -5,13 +5,17 @@ export enum Binding {
   OR = 'OR',
 }
 
+export const AndOption: SelectOption<Binding> = {
+  value: Binding.AND,
+  label: 'And',
+};
+
+export const OrOption: SelectOption<Binding> = {
+  value: Binding.OR,
+  label: 'Or',
+};
+
 export const defaultBindingOptions: SelectOption<Binding>[] = [
-  {
-    value: Binding.AND,
-    label: 'And',
-  },
-  {
-    value: Binding.OR,
-    label: 'Or',
-  },
+  AndOption,
+  OrOption,
 ];

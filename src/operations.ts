@@ -17,7 +17,7 @@ export const defaultOperationLabels: Record<OperationType, string> = {
   BIGGER_OR_EQUAL_THAN: '>=',
   BIGGER_THAN: '>',
   LOWER_OR_EQUAL_THAN: '<=',
-  LOWER_THAN: '>',
+  LOWER_THAN: '<',
   CONTAINS: 'contains',
   DOES_NOT_CONTAIN: 'does not contain',
   EQUAL: '=',

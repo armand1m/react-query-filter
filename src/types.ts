@@ -20,6 +20,7 @@ interface BooleanPropertyDescription {
   label: string;
   key: string;
   type: 'boolean';
+  suggestions?: [true, false],
 }
 
 export type PropertyDescription =
@@ -28,24 +29,49 @@ export type PropertyDescription =
   | BooleanPropertyDescription;
 
 export interface Filter {
+  id: string;
   field?: string;
   operation?: OperationType;
-  value?: string;
+  value?: string | number | boolean;
   binding?: Binding;
   type?: PropertyDescription['type'];
 }
 
+export interface FilterSelectState {
+  field?: SelectOption<string>; 
+  operation?: SelectOption<OperationType>; 
+  binding?: SelectOption<Binding>; 
+  fieldIndex?: number;
+  operationIndex?: number;
+  bindingIndex?: number;
+}
+
 export interface FilterRowProps {
+  /** The current row filter state */
   filter: Filter;
+  /** Current Select States */
+  selectStates: FilterSelectState & {
+    /** onChange handler for the `field` property of the current row filter. */
+    onChangeField: (selectedField?: SelectOption<string> | null) => void;
+    /** onChange handler for the `binding` property of the current row filter. */
+    onChangeBinding: (selectedBinding?: SelectOption<Binding> | null) => void;
+    /** onChange handler for the `operation` property of the current row filter. */
+    onChangeOperation: (selectedOperation?: SelectOption<OperationType> | null) => void;
+  }
+  /** List of Select Options for available fields. */
   fields: SelectOption<string>[];
+  /** List of Select Options for available bindings. */
   bindings: SelectOption<Binding>[];
+  /** List of Select Options for available operations. Will change based on the selected field type. */
   operations: SelectOption<OperationType>[];
+  /** List of suggestions for this row. Will change based on the selected field type. */
+  suggestions: any[];
+  /** Flag that indicates whether the UI should render the binding select input. */
   shouldRenderBindingSelect: boolean;
+  /** Flag that indicates whether the UI should render the value input. */
   shouldRenderValueInput: boolean;
-  getFieldSelectOption: (field: string) => SelectOption<string> | undefined;
+  /** Handler that removes the current row filter from the overall state. */
   onRemove: () => void;
-  onChangeBinding: (event: React.ChangeEvent<HTMLSelectElement>) => void;
-  onChangeField: (event: React.ChangeEvent<HTMLSelectElement>) => void;
-  onChangeOperation: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+  /** onChange handler for the `value` property of the current row filter. */
   onChangeValue: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
