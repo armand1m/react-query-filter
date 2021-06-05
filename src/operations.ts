@@ -54,3 +54,11 @@ export const defaultTypeOperationsMap = {
   ],
   boolean: [OperationType.IS],
 };
+
+export const mapOperationToSelectOption = (
+  operation: OperationType,
+  operationLabels: Record<OperationType, string>
+) => ({
+  value: operation,
+  label: operationLabels[operation],
+});

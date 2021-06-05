@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+
+/** TODO: Extract useList from react-use so we can eliminate it from the dependency tree **/
 import { useList } from 'react-use';
 import { v4 as uuidv4 } from 'uuid';
 import { Binding, defaultBindingOptions } from '../bindings';
@@ -7,6 +9,7 @@ import {
   defaultOperationLabels,
   defaultTypeOperationsMap,
   defaultNoValueOperations,
+  mapOperationToSelectOption,
 } from '../operations';
 import {
   Filter,
@@ -15,7 +18,7 @@ import {
   PropertyDescription,
 } from '../types';
 
-interface HookProps {
+export interface HookProps {
   properties: PropertyDescription[];
   operationLabels?: Record<OperationType, string>;
   typeOperationsMap?: Record<string, OperationType[]>;
@@ -44,6 +47,9 @@ export const useQueryFilters = ({
 }: HookProps) => {
   const [filters, filterActions] = useList<Filter>([]);
   const [selectStates, selectStateActions] = useList<FilterSelectState>([]);
+
+  // TODO: make this a component property
+  const defaultFilterType = 'string';
 
   useEffect(() => {
     if (!filters.length) return;
@@ -112,16 +118,16 @@ export const useQueryFilters = ({
       ? noValueOperations.includes(filter.operation) === false
       : true;
 
-    const operations = typeOperationsMap[filter.type ?? 'string'].map(
-      operation => ({
-        value: operation,
-        label: operationLabels[operation],
-      })
+    const operations = typeOperationsMap[filter.type ?? defaultFilterType].map(
+      operation => {
+        return mapOperationToSelectOption(operation, operationLabels);
+      }
     );
 
     const selectedProperty = properties.find(
       prop => prop.key === selectState.field?.value
     );
+
     const suggestions = selectedProperty?.suggestions ?? [];
 
     return {

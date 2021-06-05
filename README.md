@@ -1,5 +1,9 @@
 # react-query-filter
 
+<div style="max-width: 700px">
+  <img src="./.github/chakra-ui-demo.gif?raw=true">
+</div>
+
 > **Heads up:** This is still a work in progress. A lot of breaking change might happen and a lot of features are still missing. PR's are very welcome but please open an issue first describing what you think could be better.
 
 Set of utilities to implement a Query Builder for filters.
@@ -305,10 +309,6 @@ const properties: PropertyDescription[] = [
 
 <FilterSelection properties={properties} />
 ```
-
-<div style="max-width: 700px">
-  <img src="./.github/chakra-ui-demo.gif?raw=true">
-</div>
 
 ## License
 
