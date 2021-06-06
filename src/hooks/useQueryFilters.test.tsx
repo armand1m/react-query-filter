@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react-hooks';
+import { ChangeEvent } from 'react';
 import {
   defaultTypeOperationsMap,
   defaultOperationLabels,
@@ -141,6 +142,51 @@ describe('useQueryFilters', () => {
       expect(result.current.filters).toHaveLength(0);
     });
 
-    it.skip('should set the filter value when invoking the onChangeValue function', () => {});
+    it('should set the filter value to the event target value when invoking the onChangeValue function in a filter with string type', () => {
+      const result = createTestFilter();
+      const initialRowProps = result.current.createFilterRowProps(0);
+
+      const changeEvent = {
+        target: {
+          value: 'example value change',
+        },
+      } as ChangeEvent<HTMLInputElement>;
+
+      act(() => {
+        initialRowProps.onChangeValue(changeEvent);
+      });
+
+      const updatedRowProps = result.current.createFilterRowProps(0);
+      expect(updatedRowProps.filter.value).toBe(changeEvent.target.value);
+    });
+
+    it('should set the filter value to the event target checked property when invoking the onChangeValue function in a filter with boolean type', () => {
+      const result = createTestFilter();
+      const initialRowProps = result.current.createFilterRowProps(0);
+      const fields = initialRowProps.fields;
+      const nextField = fields.find(field => field.value === 'has_owner');
+
+      act(() => {
+        initialRowProps.selectStates.onChangeField(nextField);
+      });
+
+      let updatedRowProps = result.current.createFilterRowProps(0);
+
+      expect(updatedRowProps.filter.type).toBe('boolean');
+
+      const changeEvent = {
+        target: {
+          checked: true,
+        },
+      } as ChangeEvent<HTMLInputElement>;
+
+      act(() => {
+        updatedRowProps.onChangeValue(changeEvent);
+      });
+
+      updatedRowProps = result.current.createFilterRowProps(0);
+
+      expect(updatedRowProps.filter.value).toBe(changeEvent.target.checked);
+    });
   });
 });

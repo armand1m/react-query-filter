@@ -52,11 +52,11 @@ export interface FilterRowProps {
   /** Current Select States */
   selectStates: FilterSelectState & {
     /** onChange handler for the `field` property of the current row filter. */
-    onChangeField: (selectedField?: SelectOption<string> | null) => void;
+    onChangeField: (selectedField: SelectOption<string>) => void;
     /** onChange handler for the `binding` property of the current row filter. */
-    onChangeBinding: (selectedBinding?: SelectOption<Binding> | null) => void;
+    onChangeBinding: (selectedBinding: SelectOption<Binding>) => void;
     /** onChange handler for the `operation` property of the current row filter. */
-    onChangeOperation: (selectedOperation?: SelectOption<OperationType> | null) => void;
+    onChangeOperation: (selectedOperation: SelectOption<OperationType>) => void;
   }
   /** List of Select Options for available fields. */
   fields: SelectOption<string>[];

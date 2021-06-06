@@ -141,27 +141,27 @@ export const useQueryFilters = ({
         onChangeBinding: binding => {
           selectStateActions.updateAt(index, {
             ...selectState,
-            binding: binding ?? undefined,
+            binding,
             bindingIndex: bindings.findIndex(
-              val => val.value === binding?.value
+              val => val.value === binding.value
             ),
           });
           filterActions.updateAt(index, {
             ...filter,
-            binding: binding?.value,
+            binding: binding.value,
           });
         },
         onChangeField: field => {
           selectStateActions.updateAt(index, {
             ...selectState,
-            field: field ?? undefined,
-            fieldIndex: fields.findIndex(val => val.value === field?.value),
+            field,
+            fieldIndex: fields.findIndex(val => val.value === field.value),
           });
 
           filterActions.updateAt(index, {
             ...filter,
-            field: field?.value,
-            type: getFieldType(field?.value),
+            field: field.value,
+            type: getFieldType(field.value),
             operation: undefined,
             value: undefined,
           });
@@ -173,15 +173,15 @@ export const useQueryFilters = ({
 
           selectStateActions.updateAt(index, {
             ...selectState,
-            operation: operation ?? undefined,
+            operation,
             operationIndex: operations.findIndex(
-              val => val.value === operation?.value
+              val => val.value === operation.value
             ),
           });
 
           filterActions.updateAt(index, {
             ...filter,
-            operation: operation?.value,
+            operation: operation.value,
             value: shouldClearValue ? undefined : filter.value,
           });
         },
