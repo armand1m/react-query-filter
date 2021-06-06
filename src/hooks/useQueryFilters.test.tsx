@@ -166,6 +166,10 @@ describe('useQueryFilters', () => {
       const fields = initialRowProps.fields;
       const nextField = fields.find(field => field.value === 'has_owner');
 
+      if (!nextField) {
+        throw new Error("Failed to find owner field");
+      }
+
       act(() => {
         initialRowProps.selectStates.onChangeField(nextField);
       });
