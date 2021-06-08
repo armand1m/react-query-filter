@@ -4,6 +4,7 @@ import {
   defaultTypeOperationsMap,
   defaultOperationLabels,
   mapOperationToSelectOption,
+  OperationType,
 } from '../operations';
 import { useQueryFilters, HookProps } from './useQueryFilters';
 
@@ -106,6 +107,7 @@ describe('useQueryFilters', () => {
       const updatedRowProps = result.current.createFilterRowProps(0);
 
       expect(updatedRowProps.filter.binding).toBe(undefined);
+      expect(updatedRowProps.shouldRenderBindingSelect).toBeFalsy();
     });
 
     it('should set the binding if the filter being is not the first one', () => {
@@ -128,8 +130,6 @@ describe('useQueryFilters', () => {
 
       expect(updatedRowProps.filter.binding).toBe(orBinding.value);
     });
-
-    it.skip('should return the proper operation options based on the type of the field selected in the filter', () => {});
 
     it('should remove an existing row', () => {
       const result = createTestFilter();
@@ -157,6 +157,7 @@ describe('useQueryFilters', () => {
       });
 
       const updatedRowProps = result.current.createFilterRowProps(0);
+
       expect(updatedRowProps.filter.value).toBe(changeEvent.target.value);
     });
 
@@ -167,7 +168,7 @@ describe('useQueryFilters', () => {
       const nextField = fields.find(field => field.value === 'has_owner');
 
       if (!nextField) {
-        throw new Error("Failed to find owner field");
+        throw new Error('Failed to find owner field');
       }
 
       act(() => {
@@ -191,6 +192,24 @@ describe('useQueryFilters', () => {
       updatedRowProps = result.current.createFilterRowProps(0);
 
       expect(updatedRowProps.filter.value).toBe(changeEvent.target.checked);
+    });
+
+    it('should clear the filter value when the operation does not require a value to be set', () => {
+      const result = createTestFilter();
+      const initialRowProps = result.current.createFilterRowProps(0);
+      const emptyOperation = mapOperationToSelectOption(
+        OperationType.IS_EMPTY,
+        defaultOperationLabels
+      );
+
+      act(() => {
+        initialRowProps.selectStates.onChangeOperation(emptyOperation);
+      });
+
+      const updatedRowProps = result.current.createFilterRowProps(0);
+
+      expect(updatedRowProps.filter.value).toBeUndefined();
+      expect(updatedRowProps.shouldRenderValueInput).toBeFalsy();
     });
   });
 });

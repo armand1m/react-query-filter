@@ -20,7 +20,7 @@ interface BooleanPropertyDescription {
   label: string;
   key: string;
   type: 'boolean';
-  suggestions?: [true, false],
+  suggestions?: [true, false];
 }
 
 export type PropertyDescription =
@@ -38,9 +38,9 @@ export interface Filter {
 }
 
 export interface FilterSelectState {
-  field?: SelectOption<string>; 
-  operation?: SelectOption<OperationType>; 
-  binding?: SelectOption<Binding>; 
+  field?: SelectOption<string>;
+  operation?: SelectOption<OperationType>;
+  binding?: SelectOption<Binding>;
   fieldIndex?: number;
   operationIndex?: number;
   bindingIndex?: number;
@@ -57,7 +57,7 @@ export interface FilterRowProps {
     onChangeBinding: (selectedBinding: SelectOption<Binding>) => void;
     /** onChange handler for the `operation` property of the current row filter. */
     onChangeOperation: (selectedOperation: SelectOption<OperationType>) => void;
-  }
+  };
   /** List of Select Options for available fields. */
   fields: SelectOption<string>[];
   /** List of Select Options for available bindings. */

@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
-
-/** TODO: Extract useList from react-use so we can eliminate it from the dependency tree **/
-import { useList } from 'react-use';
 import { v4 as uuidv4 } from 'uuid';
+import { useList } from './useList';
 import { Binding, defaultBindingOptions } from '../bindings';
 import {
   OperationType,
@@ -97,9 +95,10 @@ export const useQueryFilters = ({
     value: property.key,
   }));
 
+  // TODO: make this a component property
   const bindings = defaultBindingOptions;
 
-  const getFieldType = (fieldKey?: string) => {
+  const getFieldType = (fieldKey: string) => {
     return properties.find(prop => prop.key === fieldKey)?.type;
   };
 
@@ -167,9 +166,7 @@ export const useQueryFilters = ({
           });
         },
         onChangeOperation: operation => {
-          const shouldClearValue = operation
-            ? noValueOperations.includes(operation.value)
-            : false;
+          const shouldClearValue = noValueOperations.includes(operation.value);
 
           selectStateActions.updateAt(index, {
             ...selectState,
