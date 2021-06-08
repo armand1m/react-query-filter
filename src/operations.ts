@@ -17,7 +17,7 @@ export const defaultOperationLabels: Record<OperationType, string> = {
   BIGGER_OR_EQUAL_THAN: '>=',
   BIGGER_THAN: '>',
   LOWER_OR_EQUAL_THAN: '<=',
-  LOWER_THAN: '>',
+  LOWER_THAN: '<',
   CONTAINS: 'contains',
   DOES_NOT_CONTAIN: 'does not contain',
   EQUAL: '=',
@@ -54,3 +54,11 @@ export const defaultTypeOperationsMap = {
   ],
   boolean: [OperationType.IS],
 };
+
+export const mapOperationToSelectOption = (
+  operation: OperationType,
+  operationLabels: Record<OperationType, string>
+) => ({
+  value: operation,
+  label: operationLabels[operation],
+});

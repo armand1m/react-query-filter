@@ -1,26 +1,26 @@
 import React, { FC } from 'react';
-import {
-  CloseButton,
-  Text,
-  HStack,
-  Input,
-  Select,
-  Tooltip,
-} from '@chakra-ui/react';
+import { CloseButton, Text, HStack, Select, Tooltip } from '@chakra-ui/react';
 import { FilterRowProps } from '../../';
+import { ValueInput } from '../shared/ValueInput';
 
 export const FilterRow: FC<FilterRowProps> = ({
   filter,
   fields,
   bindings,
   operations,
+  suggestions,
   shouldRenderBindingSelect,
   shouldRenderValueInput,
   onRemove,
-  onChangeBinding,
-  onChangeField,
-  onChangeOperation,
   onChangeValue,
+  selectStates: {
+    bindingIndex,
+    fieldIndex,
+    operationIndex,
+    onChangeBinding,
+    onChangeField,
+    onChangeOperation,
+  },
 }) => {
   return (
     <HStack>
@@ -32,12 +32,15 @@ export const FilterRow: FC<FilterRowProps> = ({
         <Select
           size="sm"
           maxWidth="6rem"
-          value={filter.binding}
-          onChange={onChangeBinding}
+          value={bindingIndex}
+          onChange={event => {
+            const index = Number(event.target.value);
+            onChangeBinding(bindings[index]);
+          }}
         >
-          {bindings.map(binding => (
+          {bindings.map((binding, index) => (
             <option
-              value={binding.value}
+              value={index}
               key={binding.value}
               selected={filter.binding === binding.value}
             >
@@ -51,13 +54,16 @@ export const FilterRow: FC<FilterRowProps> = ({
 
       <Select
         size="sm"
-        value={filter.field}
-        onChange={onChangeField}
+        value={fieldIndex}
+        onChange={event => {
+          const index = Number(event.target.value);
+          onChangeField(fields[index]);
+        }}
         placeholder="Field"
       >
-        {fields.map(field => (
+        {fields.map((field, index) => (
           <option
-            value={field.value}
+            value={index}
             key={field.value}
             selected={filter.field === field.value}
           >
@@ -68,13 +74,16 @@ export const FilterRow: FC<FilterRowProps> = ({
 
       <Select
         size="sm"
-        value={filter.operation}
-        onChange={onChangeOperation}
+        value={operationIndex}
+        onChange={event => {
+          const index = Number(event.target.value);
+          onChangeOperation(operations[index]);
+        }}
         placeholder="Operation"
       >
-        {operations.map(operation => (
+        {operations.map((operation, index) => (
           <option
-            value={operation.value}
+            value={index}
             key={operation.value}
             selected={filter.operation === operation.value}
           >
@@ -84,11 +93,13 @@ export const FilterRow: FC<FilterRowProps> = ({
       </Select>
 
       {shouldRenderValueInput && (
-        <Input
+        <ValueInput
           size="sm"
-          placeholder="Value"
-          value={filter.value ?? ''}
+          name={filter.id}
+          type={filter.type}
+          value={filter.value}
           onChange={onChangeValue}
+          suggestions={suggestions}
         />
       )}
     </HStack>

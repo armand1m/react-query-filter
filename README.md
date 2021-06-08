@@ -1,4 +1,8 @@
-# react-query-filters
+# react-query-filter
+
+<div style="max-width: 700px">
+  <img src="./.github/chakra-ui-demo.gif?raw=true">
+</div>
 
 > **Heads up:** This is still a work in progress. A lot of breaking change might happen and a lot of features are still missing. PR's are very welcome but please open an issue first describing what you think could be better.
 
@@ -6,7 +10,7 @@ Set of utilities to implement a Query Builder for filters.
 
 This library ships a `useQueryFilters` hook that you can use to implement an UI on top of it.
 
-The `useQueryFilters` will track state changes and enable you do build your query filter builder using the styles you want.
+The `useQueryFilters` will track state changes and enable you to build your own UI implementation on top of it.
 
  - [Features](#features)
  - [Signature](#signature)
@@ -24,8 +28,9 @@ The `useQueryFilters` will track state changes and enable you do build your quer
     - [ ] Single Select
     - [ ] Multiple Select
  - [x] Conditional value based on operation type
-    - Condition value is always `undefined` if operation type is `is-empty` or `is-not-empty`
+    - Condition value is always `undefined` if operation type is `IS_EMPTY` or `IS_NOT_EMPTY`
  - [x] `AND` & `OR` logic gates supported, implemented as the `Binding` enum
+ - [x] Custom Operation Labels enabled
  - [ ] Support for controlled state
  - [ ] Support for nested conditions
 
@@ -143,7 +148,7 @@ import {
   SlideFade,
   Code,
 } from '@chakra-ui/react';
-import { useQueryFilters, Filter, PropertyDescription } from 'react-query-filters';
+import { useQueryFilters, Filter, PropertyDescription } from 'react-query-filter';
 import { FilterRow } from './FilterRow';
 
 interface Props {
@@ -192,7 +197,7 @@ import {
   Select,
   Tooltip,
 } from '@chakra-ui/react';
-import { FilterRowProps } from 'react-query-filters';
+import { FilterRowProps } from 'react-query-filter';
 
 export const FilterRow: React.FC<FilterRowProps> = ({
   filter,
@@ -304,10 +309,6 @@ const properties: PropertyDescription[] = [
 
 <FilterSelection properties={properties} />
 ```
-
-<div style="max-width: 700px">
-  <img src="./.github/chakra-ui-demo.gif?raw=true">
-</div>
 
 ## License
 

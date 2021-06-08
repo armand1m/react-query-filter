@@ -4,7 +4,7 @@ import { FilterRowProps } from '../../';
 import { FilterRow } from './FilterRow';
 
 const meta: Meta<FilterRowProps> = {
-  title: 'Chakra UI/Filter Row',
+  title: 'React Select/Filter Row',
   component: FilterRow,
   parameters: {
     controls: { expanded: true },
