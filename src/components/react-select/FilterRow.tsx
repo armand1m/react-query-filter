@@ -40,7 +40,13 @@ export const FilterRow: FC<FilterRowProps> = ({
         <Select
           styles={selectStyles}
           value={binding}
-          onChange={onChangeBinding}
+          onChange={selectedBinding => {
+            if (!selectedBinding) {
+              return;
+            }
+
+            onChangeBinding(selectedBinding);
+          }}
           options={bindings}
         />
       ) : (
@@ -50,7 +56,13 @@ export const FilterRow: FC<FilterRowProps> = ({
       <Select
         styles={selectStyles}
         value={field}
-        onChange={onChangeField}
+        onChange={selectedField => {
+          if (!selectedField) {
+            return;
+          }
+
+          onChangeField(selectedField);
+        }}
         placeholder="Field"
         options={fields}
       />
@@ -58,7 +70,13 @@ export const FilterRow: FC<FilterRowProps> = ({
       <Select
         styles={selectStyles}
         value={operation}
-        onChange={onChangeOperation}
+        onChange={selectedOperation => {
+          if (!selectedOperation) {
+            return;
+          }
+
+          onChangeOperation(selectedOperation);
+        }}
         placeholder="Operation"
         options={operations}
       />

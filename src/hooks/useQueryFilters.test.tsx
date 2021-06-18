@@ -1,11 +1,13 @@
 import { act, renderHook } from '@testing-library/react-hooks';
 import { ChangeEvent } from 'react';
+import { Binding } from '../bindings';
 import {
   defaultTypeOperationsMap,
   defaultOperationLabels,
   mapOperationToSelectOption,
   OperationType,
 } from '../operations';
+import { Filter } from '../types';
 import { useQueryFilters, HookProps } from './useQueryFilters';
 
 const properties: HookProps['properties'] = [
@@ -51,6 +53,27 @@ describe('useQueryFilters', () => {
 
   it('should add empty filter when invoking the onAddFilter function', () => {
     createTestFilter();
+  });
+
+  it('should initialize using a given initial state', () => {
+    const initialValue: Filter[] = [
+      {
+        id: '35f924a2-9e1d-423c-8565-41619a5b8e8e',
+        field: 'name',
+        operation: OperationType.IS,
+        value: 'Artemis',
+        type: 'string',
+      },
+      {
+        id: '91f7e872-f0e9-4fdf-8db1-6b51c0670817',
+        binding: Binding.AND,
+      },
+    ];
+    const { result } = renderHook(() =>
+      useQueryFilters({ initialValue, properties })
+    );
+
+    expect(result.current.filters).toStrictEqual(initialValue);
   });
 
   describe('createFilterRowProps', () => {

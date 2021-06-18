@@ -6,6 +6,7 @@ module.exports = {
   addons: ['@storybook/addon-links', '@storybook/addon-essentials'],
   typescript: {
     check: true,
+    reactDocgen: 'react-docgen'
   },
   reactOptions: {
     fastRefresh: true,

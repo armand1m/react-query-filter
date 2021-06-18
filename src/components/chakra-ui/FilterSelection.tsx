@@ -9,8 +9,9 @@ interface Props {
   properties: PropertyDescription[];
 }
 
-export const FilterSelection: FC<Props> = ({ properties }) => {
+export const FilterSelection: FC<Props> = ({ value, properties }) => {
   const { filters, onAddFilter, createFilterRowProps } = useQueryFilters({
+    initialValue: value,
     properties,
   });
 
