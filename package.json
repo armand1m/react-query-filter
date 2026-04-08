@@ -1,6 +1,6 @@
 {
   "name": "react-query-filter",
-  "version": "0.0.0-development",
+  "version": "2.0.0",
   "description": "Headless query-builder hooks for React applications.",
   "license": "MIT",
   "author": "Armando Magalhães",
