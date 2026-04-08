@@ -2,76 +2,85 @@ import { Binding } from './bindings';
 import { OperationType } from './operations';
 import { SelectOption } from './select-option';
 
-interface StringPropertyDescription {
-  label: string;
+export type FieldType = 'string' | 'number' | 'boolean';
+
+export type FilterValue = string | number | boolean;
+
+type SuggestionMap = {
+  string: string;
+  number: number;
+  boolean: boolean;
+};
+
+export interface FieldDefinitionBase<TType extends FieldType> {
   key: string;
-  type: 'string';
-  suggestions?: string[];
+  label: string;
+  type: TType;
+  suggestions?: SuggestionMap[TType][];
 }
 
-interface NumberPropertyDescription {
-  label: string;
-  key: string;
-  type: 'number';
-  suggestions?: number[];
-}
+export type StringFieldDefinition = FieldDefinitionBase<'string'>;
+export type NumberFieldDefinition = FieldDefinitionBase<'number'>;
+export type BooleanFieldDefinition = FieldDefinitionBase<'boolean'>;
 
-interface BooleanPropertyDescription {
-  label: string;
-  key: string;
-  type: 'boolean';
-  suggestions?: [true, false];
-}
+export type FieldDefinition =
+  | StringFieldDefinition
+  | NumberFieldDefinition
+  | BooleanFieldDefinition;
 
-export type PropertyDescription =
-  | StringPropertyDescription
-  | NumberPropertyDescription
-  | BooleanPropertyDescription;
+export type PropertyDescription = FieldDefinition;
 
 export interface Filter {
   id: string;
   field?: string;
-  operation?: OperationType;
-  value?: string | number | boolean;
-  binding?: Binding;
-  type?: PropertyDescription['type'];
+  operator?: OperationType;
+  value?: FilterValue;
+  combinator?: Binding;
+  type?: FieldType;
 }
 
-export interface FilterSelectState {
-  field?: SelectOption<string>;
-  operation?: SelectOption<OperationType>;
-  binding?: SelectOption<Binding>;
-  fieldIndex?: number;
-  operationIndex?: number;
-  bindingIndex?: number;
+export interface FilterDraft {
+  field?: string;
+  operator?: OperationType;
+  value?: FilterValue;
+  combinator?: Binding;
+  type?: FieldType;
 }
 
-export interface FilterRowProps {
-  /** The current row filter state */
-  filter: Filter;
-  /** Current Select States */
-  selectStates: FilterSelectState & {
-    /** onChange handler for the `field` property of the current row filter. */
-    onChangeField: (selectedField: SelectOption<string>) => void;
-    /** onChange handler for the `binding` property of the current row filter. */
-    onChangeBinding: (selectedBinding: SelectOption<Binding>) => void;
-    /** onChange handler for the `operation` property of the current row filter. */
-    onChangeOperation: (selectedOperation: SelectOption<OperationType>) => void;
-  };
-  /** List of Select Options for available fields. */
-  fields: SelectOption<string>[];
-  /** List of Select Options for available bindings. */
-  bindings: SelectOption<Binding>[];
-  /** List of Select Options for available operations. Will change based on the selected field type. */
-  operations: SelectOption<OperationType>[];
-  /** List of suggestions for this row. Will change based on the selected field type. */
-  suggestions: any[];
-  /** Flag that indicates whether the UI should render the binding select input. */
-  shouldRenderBindingSelect: boolean;
-  /** Flag that indicates whether the UI should render the value input. */
-  shouldRenderValueInput: boolean;
-  /** Handler that removes the current row filter from the overall state. */
-  onRemove: () => void;
-  /** onChange handler for the `value` property of the current row filter. */
-  onChangeValue: (event: React.ChangeEvent<HTMLInputElement>) => void;
+export interface UseQueryFiltersOptions {
+  fields: FieldDefinition[];
+  value?: Filter[];
+  defaultValue?: Array<Filter | FilterDraft>;
+  onChange?: (filters: Filter[]) => void;
+  defaultCombinator?: Binding;
+  operationLabels?: Partial<Record<OperationType, string>>;
+  typeOperationsMap?: Partial<Record<FieldType, OperationType[]>>;
+  noValueOperations?: OperationType[];
+}
+
+export interface UseQueryFiltersResult {
+  filters: Filter[];
+  fieldOptions: SelectOption<string>[];
+  combinatorOptions: SelectOption<Binding>[];
+  operationLabels: Record<OperationType, string>;
+  addFilter: (draft?: FilterDraft) => void;
+  removeFilter: (filterId: string) => void;
+  updateField: (filterId: string, field?: string) => void;
+  updateOperator: (
+    filterId: string,
+    operator?: OperationType
+  ) => void;
+  updateValue: (filterId: string, value?: FilterValue) => void;
+  updateCombinator: (filterId: string, combinator: Binding) => void;
+  replaceFilters: (filters: Filter[]) => void;
+  reset: () => void;
+  getFilter: (filterId: string) => Filter | undefined;
+  getFieldDefinition: (
+    fieldKey?: string
+  ) => FieldDefinition | undefined;
+  getAvailableOperations: (
+    filterId: string
+  ) => SelectOption<OperationType>[];
+  getSuggestions: (filterId: string) => FilterValue[];
+  shouldRenderValue: (filterId: string) => boolean;
 }
