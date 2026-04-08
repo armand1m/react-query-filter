@@ -16,6 +16,8 @@ Use `npm` for local work.
 - `npm run example`: start the Vite example app.
 - `npm run validate`: run formatting checks, lint, typecheck, tests, and build.
 
+The example app is deployed to GitHub Pages via `.github/workflows/pages.yml`. Keep the Pages build rooted in `example/dist` and preserve the repo-scoped base path so the hosted demo works under the repository URL.
+
 ## Design & Architecture Principles
 
 Keep the library headless, but optimize for low-friction usage. The primary API should hide tree complexity behind schema helpers and typed controllers so developers do not need to manually traverse nodes, juggle ids, or learn tree internals before they can ship a UI. Favor a schema-first builder facade for onboarding and keep raw tree utilities as an advanced layer.

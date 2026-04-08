@@ -17,6 +17,7 @@ npm run validate
 - `npm run test`: run Vitest with coverage
 - `npm run lint`: run ESLint
 - `npm run example`: start the Vite example app
+- GitHub Pages deploys the built example app from `example/dist` on pushes to `main`
 
 ## Contribution guidelines
 

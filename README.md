@@ -184,6 +184,8 @@ npm run validate
 npm run example
 ```
 
+The example app is also deployable to GitHub Pages from this repository. The Pages workflow builds `example/` with the repository base path so the hosted demo works at `https://armand1m.github.io/react-query-filter/`.
+
 ## Release automation
 
 Releases are automated with Release Please on `main`. Maintainers do not hand-edit `CHANGELOG.md` or bump `package.json` versions for normal releases.

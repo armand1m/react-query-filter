@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   ConditionController,
   GroupController,
@@ -20,6 +21,208 @@ const schema = defineFilterSchema({
     suggestions: [true, false],
   }),
 });
+
+const IMPLEMENTATION_SNIPPET = `import {
+  type ConditionController,
+  type GroupController,
+  defineFilterSchema,
+  field,
+  useFilterBuilder,
+} from 'react-query-filter';
+
+const schema = defineFilterSchema({
+  status: field.string({ label: 'Status' }),
+  score: field.number({ label: 'Score' }),
+  published: field.boolean({ label: 'Published' }),
+});
+
+function ConditionRow({
+  condition,
+  group,
+}: {
+  condition: ConditionController<typeof schema>;
+  group: GroupController<typeof schema>;
+}) {
+  const fieldProps = condition.fieldSelectProps();
+  const operatorProps = condition.operatorSelectProps();
+
+  return (
+    <div>
+      {group.firstCondition?.id === condition.id ? (
+        <select {...group.combinatorSelectProps()} />
+      ) : (
+        <span>{group.combinator}</span>
+      )}
+
+      <select {...fieldProps}>
+        <option disabled hidden value="">
+          Field
+        </option>
+        {fieldProps.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+
+      <select {...operatorProps}>
+        <option disabled hidden value="">
+          Operator
+        </option>
+        {operatorProps.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+
+      {condition.valueInput.kind === 'text' ? (
+        <input type="text" {...condition.valueInput.props} />
+      ) : null}
+
+      {condition.valueInput.kind === 'number' ? (
+        <input type="number" {...condition.valueInput.props} />
+      ) : null}
+
+      {condition.valueInput.kind === 'boolean' ? (
+        <input type="checkbox" {...condition.valueInput.props} />
+      ) : null}
+    </div>
+  );
+}
+
+function GroupedFilters({
+  group,
+}: {
+  group: GroupController<typeof schema>;
+}) {
+  return (
+    <section>
+      <button onClick={() => group.addCondition()}>
+        Add Filter
+      </button>
+      <button onClick={() => group.addGroup()}>
+        Add Filter Group
+      </button>
+
+      {group.children.map((child) =>
+        child.kind === 'group' ? (
+          <GroupedFilters key={child.id} group={child} />
+        ) : (
+          <ConditionRow
+            key={child.id}
+            condition={child}
+            group={group}
+          />
+        )
+      )}
+    </section>
+  );
+}
+
+export function Filters() {
+  const builder = useFilterBuilder({ schema });
+
+  return <GroupedFilters group={builder.root} />;
+}`;
+
+const CODE_KEYWORDS = new Set([
+  'const',
+  'return',
+  'function',
+  'import',
+  'from',
+  'type',
+  'export',
+  'if',
+  'else',
+  'null',
+  'true',
+  'false',
+]);
+
+const tokenizeCodeLine = (line: string) => {
+  const pattern =
+    /(\/\/.*$|'(?:\\.|[^'])*'|"(?:\\.|[^"])*"|`(?:\\.|[^`])*`|\b(?:const|return|function|import|from|type|export|if|else|null|true|false)\b|\b[A-Z][A-Za-z0-9_]*\b|<\/?[A-Za-z][^>\s]*|[{}()[\].,:]|=>)/g;
+  const tokens: Array<{
+    type:
+      | 'plain'
+      | 'comment'
+      | 'string'
+      | 'keyword'
+      | 'type'
+      | 'jsx'
+      | 'punctuation';
+    value: string;
+  }> = [];
+  let lastIndex = 0;
+
+  for (const match of line.matchAll(pattern)) {
+    const value = match[0];
+    const index = match.index ?? 0;
+
+    if (index > lastIndex) {
+      tokens.push({
+        type: 'plain',
+        value: line.slice(lastIndex, index),
+      });
+    }
+
+    let type: (typeof tokens)[number]['type'] = 'plain';
+
+    if (value.startsWith('//')) {
+      type = 'comment';
+    } else if (
+      value.startsWith("'") ||
+      value.startsWith('"') ||
+      value.startsWith('`')
+    ) {
+      type = 'string';
+    } else if (CODE_KEYWORDS.has(value)) {
+      type = 'keyword';
+    } else if (
+      value.startsWith('<') ||
+      value === '</' ||
+      value === '/>'
+    ) {
+      type = 'jsx';
+    } else if (/^[A-Z]/.test(value)) {
+      type = 'type';
+    } else if (/^[{}()[\].,:]|=>$/.test(value)) {
+      type = 'punctuation';
+    }
+
+    tokens.push({ type, value });
+    lastIndex = index + value.length;
+  }
+
+  if (lastIndex < line.length) {
+    tokens.push({
+      type: 'plain',
+      value: line.slice(lastIndex),
+    });
+  }
+
+  return tokens;
+};
+
+const HighlightedCode = ({ code }: { code: string }) => (
+  <code>
+    {code.split('\n').map((line, lineIndex) => (
+      <span className="code-line" key={`line-${lineIndex}`}>
+        {tokenizeCodeLine(line).map((token, tokenIndex) => (
+          <span
+            className={`token token-${token.type}`}
+            key={`token-${lineIndex}-${tokenIndex}`}
+          >
+            {token.value}
+          </span>
+        ))}
+        {lineIndex < code.split('\n').length - 1 ? '\n' : null}
+      </span>
+    ))}
+  </code>
+);
 
 const renderValueInput = (
   condition: ConditionController<typeof schema>
@@ -219,6 +422,7 @@ const GroupedFilters = ({
 );
 
 export const App = () => {
+  const [showImplementation, setShowImplementation] = useState(false);
   const builder = useFilterBuilder({
     schema,
     defaultValue: {
@@ -245,6 +449,33 @@ export const App = () => {
         </div>
 
         <GroupedFilters group={builder.root} />
+      </section>
+
+      <section className="panel panel-code">
+        <div className="implementation-header">
+          <div>
+            <span className="eyebrow">Example usage</span>
+            <h2>Render the same builder facade in your app</h2>
+          </div>
+          <button
+            aria-expanded={showImplementation}
+            className="button button-secondary"
+            onClick={() =>
+              setShowImplementation((current) => !current)
+            }
+            type="button"
+          >
+            {showImplementation
+              ? 'Hide Code Implementation'
+              : 'Show Code Implementation'}
+          </button>
+        </div>
+
+        {showImplementation ? (
+          <pre className="implementation-snippet">
+            <HighlightedCode code={IMPLEMENTATION_SNIPPET} />
+          </pre>
+        ) : null}
       </section>
 
       <section className="panel panel-code">
