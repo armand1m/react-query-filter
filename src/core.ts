@@ -60,7 +60,27 @@ export const coerceFilterValue = (
 
   switch (type) {
     case 'boolean':
-      return Boolean(value);
+      if (typeof value === 'boolean') {
+        return value;
+      }
+
+      if (typeof value === 'string') {
+        const normalizedValue = value.trim().toLowerCase();
+
+        if (normalizedValue === 'true') {
+          return true;
+        }
+
+        if (normalizedValue === 'false') {
+          return false;
+        }
+      }
+
+      if (typeof value === 'number') {
+        return value !== 0;
+      }
+
+      return undefined;
     case 'number':
       return typeof value === 'number' ? value : Number(value);
     case 'string':

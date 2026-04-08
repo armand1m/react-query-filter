@@ -184,6 +184,57 @@ describe('useQueryFilters', () => {
     ]);
   });
 
+  it('parses string boolean payloads explicitly in default values', () => {
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        defaultValue: {
+          kind: 'group',
+          children: [
+            {
+              kind: 'condition',
+              field: 'isAdmin',
+              operator: OperationType.IS,
+              value: 'false',
+            },
+          ],
+        },
+      })
+    );
+
+    expect(getFirstCondition(result.current.rootGroup).value).toBe(
+      false
+    );
+  });
+
+  it('parses string boolean payloads explicitly on updates', () => {
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        defaultValue: {
+          kind: 'group',
+          children: [{ kind: 'condition', field: 'isAdmin' }],
+        },
+      })
+    );
+
+    const conditionId = getFirstCondition(
+      result.current.rootGroup
+    ).id;
+
+    act(() => {
+      result.current.updateConditionOperator(
+        conditionId,
+        OperationType.IS
+      );
+      result.current.updateConditionValue(conditionId, 'false');
+    });
+
+    expect(getFirstCondition(result.current.rootGroup).value).toBe(
+      false
+    );
+  });
+
   it('updates the combinator on a nested group', () => {
     const { result } = renderHook(() => useQueryFilters({ fields }));
 
