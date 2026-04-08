@@ -2,28 +2,40 @@
 
 ## Project Structure & Module Organization
 
-`src/` contains the published library. Core types and enums live in `src/types.ts`, `src/operations.ts`, `src/bindings.ts`, and `src/core.ts`, while the public hook lives in `src/hooks/`. The local demo app is in `example/` with its own `src/` entrypoint. Build output goes to `dist/` and should be treated as generated artifacts.
+`src/` contains the published library. The low-level grouped-filter engine lives in `src/core.ts` and `src/hooks/useQueryFilters.ts`, while the recommended consumer API lives in `src/schema.ts` and `src/hooks/useFilterBuilder.ts`. Keep `src/index.tsx` focused on stable public exports. The demo app in `example/src/` should always reflect the recommended integration path, not internal-only APIs. Build output goes to `dist/` and is generated.
 
 ## Build, Test, and Development Commands
 
 Use `npm` for local work.
 
-- `npm run dev`: watches the library build with `tsup`.
-- `npm run build`: creates ESM/CJS bundles and declarations in `dist/`.
-- `npm run test`: runs the Vitest suite with coverage.
-- `npm run lint`: runs ESLint.
-- `npm run typecheck`: runs TypeScript in strict mode.
-- `npm run example`: starts the Vite example app.
-- `npm run validate`: runs formatting checks, lint, typecheck, tests, and build.
+- `npm run dev`: watch the library build with `tsup`.
+- `npm run build`: create ESM/CJS bundles and declarations in `dist/`.
+- `npm run test`: run Vitest with coverage.
+- `npm run lint`: run ESLint.
+- `npm run typecheck`: run TypeScript for both library and example.
+- `npm run example`: start the Vite example app.
+- `npm run validate`: run formatting checks, lint, typecheck, tests, and build.
+
+## Design & Architecture Principles
+
+Keep the library headless, but optimize for low-friction usage. The primary API should hide tree complexity behind schema helpers and typed controllers so developers do not need to manually traverse nodes, juggle ids, or learn tree internals before they can ship a UI. Favor a schema-first builder facade for onboarding and keep raw tree utilities as an advanced layer.
+
+Type safety is non-negotiable. New APIs should improve autocomplete quality, preserve typed field keys and value shapes, and avoid consumer-side casts such as `as Binding` or `as OperationType`. Do not require manual coercion like `Boolean()`, `String()`, or `Number()` in example or recommended consumer code; prefer typed controller props and native-friendly adapters instead.
+
+Recursive groups are a core capability, but the mental model should stay simple. Group combinators belong to groups, not to each row. When adding abstractions, prefer controller methods such as `addCondition()`, `addGroup()`, `setField()`, and `setValue()` over generic tree mutation helpers.
 
 ## Coding Style & Naming Conventions
 
-This repository uses TypeScript and React with 2-space indentation, LF line endings, and single quotes. Follow Prettier and the flat ESLint config in `eslint.config.js`; prefer running `npm run validate` before submitting changes. Use named exports. Keep hooks in camelCase files such as `useQueryFilters.ts`, colocate tests as `*.test.tsx`, and keep the published package headless rather than bundling UI kits into `src/`.
+Use TypeScript, React, 2-space indentation, LF line endings, and single quotes. Follow Prettier and `eslint.config.js`. Use named exports. Keep public API names intention-revealing and beginner-friendly. Reserve terse or highly generic helpers for internal code only if they are not part of the recommended surface.
+
+## Example App Guidelines
+
+The example app is a DX artifact, not just a demo. It should show the easiest correct integration with native elements first, use the builder facade instead of low-level hooks, and stay compact and desktop-friendly. Prefer icon-assisted controls, realistic grouped-filter flows, and immediate starter state over empty onboarding screens. If consumer code in the example feels verbose or needs casts/parsing, treat that as a library DX bug.
 
 ## Testing Guidelines
 
-Tests use Vitest and `@testing-library/react`. Add tests next to the code they verify, following the existing `*.test.tsx` pattern, for example `src/hooks/useQueryFilters.test.tsx`. Cover state transitions, operation changes, normalization, and controlled-mode behavior. Run `npm run test` locally before opening a PR.
+Tests use Vitest and `@testing-library/react`. Add tests next to implementation as `*.test.tsx`. Cover recursive behavior, controlled/uncontrolled state, controller helpers, schema inference, and any API intended for direct consumer use. Changes to the recommended DX path should include example-facing or facade-facing tests, not only low-level tree tests.
 
 ## Commit & Pull Request Guidelines
 
-Follow Conventional Commits as already used in history: `feat: ...`, `fix: ...`, `test: ...`. Keep messages imperative and scoped to one change. Pull requests should explain the behavior change, reference the relevant issue when applicable, and include screenshots or Storybook notes for UI-facing updates. Call out any API or breaking changes explicitly.
+Follow Conventional Commits such as `feat:`, `fix:`, and `test:`. Keep commits scoped to a coherent behavior change. Pull requests should explain user-facing DX impact, especially when changing the public API, example integration path, or type surface. Call out breaking changes and migration implications explicitly.

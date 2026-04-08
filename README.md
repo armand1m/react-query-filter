@@ -2,15 +2,7 @@
 
 Headless recursive query-builder hooks for React 18 and 19.
 
-This library exposes a typed grouped-filter tree plus mutation helpers so applications can build nested query-builder interfaces without coupling to a specific UI kit.
-
-## Highlights
-
-- React 18/19 support
-- Recursive groups and conditions
-- Shared group combinators for easier mental parsing
-- Controlled and uncontrolled usage
-- Modern build/test toolchain based on `tsup`, Vite, and Vitest
+The library keeps a tree-based grouped-filter engine internally, but the primary API is now a schema-driven builder facade. Consumers define fields once, then render typed group and condition controllers without juggling raw node ids, enum casts, or manual `Boolean` / `Number` / `String` coercion.
 
 ## Install
 
@@ -22,119 +14,166 @@ npm install react-query-filter
 
 ```tsx
 import {
-  Binding,
-  OperationType,
-  useQueryFilters,
-  type FieldDefinition,
+  defineFilterSchema,
+  field,
+  useFilterBuilder,
 } from 'react-query-filter';
 
-const fields: FieldDefinition[] = [
-  { key: 'status', label: 'Status', type: 'string' },
-  { key: 'score', label: 'Score', type: 'number' },
-];
+const schema = defineFilterSchema({
+  status: field.string({
+    label: 'Status',
+    suggestions: ['draft', 'active', 'archived'],
+  }),
+  score: field.number({
+    label: 'Score',
+    suggestions: [10, 25, 50],
+  }),
+  published: field.boolean({
+    label: 'Published',
+  }),
+});
 
-function Example() {
-  const {
-    rootGroup,
-    addCondition,
-    addGroup,
-    updateConditionField,
-    updateConditionOperator,
-    updateConditionValue,
-    updateGroupCombinator,
-    getAvailableOperations,
-  } = useQueryFilters({ fields });
-
-  const firstCondition = rootGroup.children.find(
-    (child) => child.kind === 'condition'
-  );
+function Filters() {
+  const builder = useFilterBuilder({ schema });
 
   return (
-    <>
-      <button onClick={() => addCondition(rootGroup.id)}>
-        Add condition
+    <div>
+      <button onClick={() => builder.root.addCondition()}>
+        Add Filter
       </button>
-      <button onClick={() => addGroup(rootGroup.id)}>
-        Add group
+      <button onClick={() => builder.root.addGroup()}>
+        Add Filter Group
       </button>
 
-      {firstCondition?.kind === 'condition' ? (
-        <div>
-          <select
-            value={rootGroup.combinator}
-            onChange={(event) =>
-              updateGroupCombinator(
-                rootGroup.id,
-                event.target.value as Binding
-              )
-            }
-          >
-            <option value="AND">And</option>
-            <option value="OR">Or</option>
-          </select>
-
-          <select
-            onChange={(event) =>
-              updateConditionField(
-                firstCondition.id,
-                event.target.value
-              )
-            }
-          />
-
-          <select
-            onChange={(event) =>
-              updateConditionOperator(
-                firstCondition.id,
-                event.target.value as OperationType
-              )
-            }
-          >
-            {getAvailableOperations(firstCondition.id).map(
-              (option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              )
-            )}
-          </select>
-
-          <input
-            onChange={(event) =>
-              updateConditionValue(
-                firstCondition.id,
-                event.target.value
-              )
-            }
-          />
-        </div>
-      ) : null}
-    </>
+      <GroupedFilters group={builder.root} />
+    </div>
   );
 }
 ```
 
-## API snapshot
+## Recursive UI example
 
-`useQueryFilters(options)` returns:
+```tsx
+import {
+  type ConditionController,
+  type GroupController,
+} from 'react-query-filter';
 
-- `rootGroup`
-- `fieldOptions`
-- `combinatorOptions`
-- `addCondition`, `addGroup`, `removeNode`, `replaceTree`, `reset`
-- `updateConditionField`, `updateConditionOperator`, `updateConditionValue`
-- `updateGroupCombinator`
-- `getNode`, `getGroup`, `getCondition`
-- `getFieldDefinition`, `getAvailableOperations`, `getSuggestions`, `shouldRenderValue`
+function ConditionRow({
+  condition,
+  group,
+}: {
+  condition: ConditionController<typeof schema>;
+  group: GroupController<typeof schema>;
+}) {
+  const combinatorProps = group.combinatorSelectProps();
+  const fieldProps = condition.fieldSelectProps();
+  const operatorProps = condition.operatorSelectProps();
 
-## Group behavior
+  return (
+    <div>
+      {group.firstCondition?.id === condition.id ? (
+        <select {...combinatorProps}>
+          {combinatorProps.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : null}
 
-- Every group owns one logical combinator: `AND` or `OR`.
-- Direct child conditions in the same group reflect that shared combinator.
-- In the example UI, the combinator is selected on the first direct condition row in a group.
-- If a group has no direct condition row yet, the combinator falls back to the group header.
+      <select {...fieldProps}>
+        <option value="">Field</option>
+        {fieldProps.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
 
-See [`example/src/App.tsx`](./example/src/App.tsx) for a complete recursive UI example.
+      <select {...operatorProps}>
+        <option value="">Operator</option>
+        {operatorProps.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+
+      {condition.valueInput.kind === 'text' ? (
+        <input type="text" {...condition.valueInput.props} />
+      ) : null}
+
+      {condition.valueInput.kind === 'number' ? (
+        <input type="number" {...condition.valueInput.props} />
+      ) : null}
+
+      {condition.valueInput.kind === 'boolean' ? (
+        <input type="checkbox" {...condition.valueInput.props} />
+      ) : null}
+    </div>
+  );
+}
+
+function GroupedFilters({
+  group,
+}: {
+  group: GroupController<typeof schema>;
+}) {
+  return (
+    <section>
+      <button onClick={() => group.addCondition()}>Add Filter</button>
+      <button onClick={() => group.addGroup()}>
+        Add Filter Group
+      </button>
+
+      {group.children.map((child) =>
+        child.kind === 'group' ? (
+          <GroupedFilters key={child.id} group={child} />
+        ) : (
+          <ConditionRow
+            key={child.id}
+            condition={child}
+            group={group}
+          />
+        )
+      )}
+    </section>
+  );
+}
+```
+
+## Beginner-facing API
+
+Primary exports:
+
+- `defineFilterSchema`
+- `field.string()`, `field.number()`, `field.boolean()`
+- `useFilterBuilder`
+- `GroupController` and `ConditionController` helper types
+
+`useFilterBuilder()` returns:
+
+- `root`: recursive group controller
+- `rootGroup`: raw tree value for persistence or debugging
+- `reset()`
+- `replaceTree()`
+
+Each `GroupController` exposes:
+
+- `children`, `directConditions`, `directGroups`, `firstCondition`
+- `addCondition()`, `addGroup()`, `remove()`
+- `setCombinator()` and `combinatorSelectProps()`
+
+Each `ConditionController` exposes:
+
+- `field`, `operator`, `suggestions`, `availableOperators`
+- `setField()`, `setOperator()`, `setValue()`, `remove()`
+- `fieldSelectProps()`, `operatorSelectProps()`, `valueInput`
+
+## Advanced API
+
+For advanced tree manipulation, the lower-level `useQueryFilters` hook and raw group/condition types remain available. That path is useful if you want direct access to the normalized tree engine, but it is no longer the recommended onboarding path.
 
 ## Development
 
@@ -144,11 +183,3 @@ npm --prefix example install
 npm run validate
 npm run example
 ```
-
-## Migration notes
-
-- Flat `filters` were replaced by recursive `rootGroup`
-- `addFilter` became `addCondition(groupId)`
-- `removeFilter` became `removeNode(nodeId)`
-- `updateField`, `updateOperator`, and `updateValue` became condition-specific update methods
-- Group combinators now live on `FilterGroup`, not on individual condition rows
