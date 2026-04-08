@@ -1,5 +1,4 @@
 import { Binding } from './bindings';
-import { SelectOption } from './select-option';
 import {
   defaultNoValueOperations,
   defaultOperationLabels,
@@ -7,15 +6,16 @@ import {
   OperationType,
 } from './operations';
 import {
-  FieldDefinition,
-  FieldType,
-  FilterCondition,
-  FilterConditionDraft,
-  FilterGroup,
-  FilterGroupDraft,
-  FilterNode,
-  FilterNodeDraft,
-  FilterValue,
+  type FieldDefinition,
+  type FieldType,
+  type FilterCondition,
+  type FilterConditionDraft,
+  type FilterGroup,
+  type FilterGroupDraft,
+  type FilterNode,
+  type FilterNodeDraft,
+  type FilterValue,
+  type SelectOption,
 } from './types';
 
 const createFallbackId = () =>
@@ -93,11 +93,6 @@ export const isFilterGroup = (
   node: FilterNode | FilterNodeDraft
 ): node is FilterGroup | FilterGroupDraft =>
   node.kind === 'group' || 'children' in node || 'combinator' in node;
-
-export const isFilterCondition = (
-  node: FilterNode | FilterNodeDraft
-): node is FilterCondition | FilterConditionDraft =>
-  !isFilterGroup(node);
 
 export const normalizeCondition = (
   condition: FilterCondition | FilterConditionDraft,

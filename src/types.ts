@@ -1,7 +1,11 @@
-import { ChangeEventHandler } from 'react';
-import { Binding } from './bindings';
-import { OperationType } from './operations';
-import { SelectOption } from './select-option';
+import type { ChangeEventHandler } from 'react';
+import type { Binding } from './bindings';
+import type { OperationType } from './operations';
+
+export interface SelectOption<T> {
+  label: string;
+  value: T;
+}
 
 export type FieldType = 'string' | 'number' | 'boolean';
 
@@ -28,8 +32,6 @@ export type FieldDefinition =
   | StringFieldDefinition
   | NumberFieldDefinition
   | BooleanFieldDefinition;
-
-export type PropertyDescription = FieldDefinition;
 
 export interface FilterCondition {
   id: string;
@@ -162,6 +164,25 @@ export interface FieldFactory {
     field: Omit<SchemaBooleanField, 'type'>
   ) => SchemaBooleanField;
 }
+
+export const field: FieldFactory = {
+  string: (value): SchemaStringField => ({
+    ...value,
+    type: 'string',
+  }),
+  number: (value): SchemaNumberField => ({
+    ...value,
+    type: 'number',
+  }),
+  boolean: (value): SchemaBooleanField => ({
+    ...value,
+    type: 'boolean',
+  }),
+};
+
+export const defineFilterSchema = <TSchema extends FilterSchema>(
+  schema: TSchema
+) => schema;
 
 export interface NativeSelectProps<TValue extends string> {
   onChange: ChangeEventHandler<HTMLSelectElement>;

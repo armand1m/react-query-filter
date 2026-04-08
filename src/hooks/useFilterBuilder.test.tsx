@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { Binding } from '../bindings';
-import { defineFilterSchema, field } from '../schema';
+import { defineFilterSchema, field } from '../types';
 import { useFilterBuilder } from './useFilterBuilder';
 
 const schema = defineFilterSchema({

@@ -17,16 +17,16 @@ import {
   mapOperationToSelectOption,
   OperationType,
 } from '../operations';
-import { SelectOption } from '../select-option';
 import {
-  FilterCondition,
-  FilterConditionDraft,
-  FilterGroup,
-  FilterGroupDraft,
-  FilterNode,
-  FilterValue,
-  UseQueryFiltersOptions,
-  UseQueryFiltersResult,
+  type FilterCondition,
+  type FilterConditionDraft,
+  type FilterGroup,
+  type FilterGroupDraft,
+  type FilterNode,
+  type FilterValue,
+  type SelectOption,
+  type UseQueryFiltersOptions,
+  type UseQueryFiltersResult,
 } from '../types';
 
 const removeValueForOperator = (

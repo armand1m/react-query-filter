@@ -2,20 +2,20 @@ import { useMemo } from 'react';
 import { defaultTypeOperationsMap } from '../operations';
 import { useQueryFilters } from './useQueryFilters';
 import {
-  ConditionController,
-  FieldDefinition,
-  FilterCondition,
-  FilterConditionDraft,
-  FilterGroup,
-  FilterGroupDraft,
-  FilterSchema,
-  GroupController,
-  SchemaField,
-  SchemaKey,
-  SchemaValue,
-  UseFilterBuilderOptions,
-  UseFilterBuilderResult,
-  ValueInputController,
+  type ConditionController,
+  type FieldDefinition,
+  type FilterCondition,
+  type FilterConditionDraft,
+  type FilterGroup,
+  type FilterGroupDraft,
+  type FilterSchema,
+  type GroupController,
+  type SchemaField,
+  type SchemaKey,
+  type SchemaValue,
+  type UseFilterBuilderOptions,
+  type UseFilterBuilderResult,
+  type ValueInputController,
 } from '../types';
 
 const getSchemaKeys = <TSchema extends FilterSchema>(
