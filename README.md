@@ -1,15 +1,15 @@
 # react-query-filter
 
-Headless query-builder hooks for React 18 and 19.
+Headless recursive query-builder hooks for React 18 and 19.
 
-This refresh turns the package into a typed core library. Instead of returning DOM event handlers and prebuilt UI row props, `useQueryFilters` now exposes state, typed actions, and derived selectors so applications can build their own query-builder interface.
+This library exposes a typed grouped-filter tree plus mutation helpers so applications can build nested query-builder interfaces without coupling to a specific UI kit.
 
 ## Highlights
 
 - React 18/19 support
-- Headless API with typed field definitions
+- Recursive groups and conditions
+- Shared group combinators for easier mental parsing
 - Controlled and uncontrolled usage
-- No bundled UI kit dependencies
 - Modern build/test toolchain based on `tsup`, Vite, and Vitest
 
 ## Install
@@ -22,78 +22,93 @@ npm install react-query-filter
 
 ```tsx
 import {
+  Binding,
   OperationType,
   useQueryFilters,
   type FieldDefinition,
 } from 'react-query-filter';
 
 const fields: FieldDefinition[] = [
-  {
-    key: 'status',
-    label: 'Status',
-    type: 'string',
-    suggestions: ['draft', 'active'],
-  },
-  {
-    key: 'score',
-    label: 'Score',
-    type: 'number',
-    suggestions: [10, 50],
-  },
+  { key: 'status', label: 'Status', type: 'string' },
+  { key: 'score', label: 'Score', type: 'number' },
 ];
 
 function Example() {
   const {
-    filters,
-    fieldOptions,
-    addFilter,
-    updateField,
-    updateOperator,
-    updateValue,
+    rootGroup,
+    addCondition,
+    addGroup,
+    updateConditionField,
+    updateConditionOperator,
+    updateConditionValue,
+    updateGroupCombinator,
     getAvailableOperations,
   } = useQueryFilters({ fields });
 
+  const firstCondition = rootGroup.children.find(
+    (child) => child.kind === 'condition'
+  );
+
   return (
     <>
-      <button onClick={() => addFilter()}>Add filter</button>
-      {filters.map((filter) => (
-        <div key={filter.id}>
+      <button onClick={() => addCondition(rootGroup.id)}>
+        Add condition
+      </button>
+      <button onClick={() => addGroup(rootGroup.id)}>
+        Add group
+      </button>
+
+      {firstCondition?.kind === 'condition' ? (
+        <div>
           <select
+            value={rootGroup.combinator}
             onChange={(event) =>
-              updateField(filter.id, event.target.value)
+              updateGroupCombinator(
+                rootGroup.id,
+                event.target.value as Binding
+              )
             }
           >
-            <option value="">Field</option>
-            {fieldOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+            <option value="AND">And</option>
+            <option value="OR">Or</option>
           </select>
 
           <select
             onChange={(event) =>
-              updateOperator(
-                filter.id,
+              updateConditionField(
+                firstCondition.id,
+                event.target.value
+              )
+            }
+          />
+
+          <select
+            onChange={(event) =>
+              updateConditionOperator(
+                firstCondition.id,
                 event.target.value as OperationType
               )
             }
           >
-            <option value="">Operator</option>
-            {getAvailableOperations(filter.id).map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+            {getAvailableOperations(firstCondition.id).map(
+              (option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              )
+            )}
           </select>
 
           <input
             onChange={(event) =>
-              updateValue(filter.id, event.target.value)
+              updateConditionValue(
+                firstCondition.id,
+                event.target.value
+              )
             }
           />
         </div>
-      ))}
+      ) : null}
     </>
   );
 }
@@ -103,27 +118,37 @@ function Example() {
 
 `useQueryFilters(options)` returns:
 
-- `filters`
+- `rootGroup`
 - `fieldOptions`
 - `combinatorOptions`
-- `addFilter`, `removeFilter`, `replaceFilters`, `reset`
-- `updateField`, `updateOperator`, `updateValue`, `updateCombinator`
-- `getFilter`, `getFieldDefinition`, `getAvailableOperations`, `getSuggestions`, `shouldRenderValue`
+- `addCondition`, `addGroup`, `removeNode`, `replaceTree`, `reset`
+- `updateConditionField`, `updateConditionOperator`, `updateConditionValue`
+- `updateGroupCombinator`
+- `getNode`, `getGroup`, `getCondition`
+- `getFieldDefinition`, `getAvailableOperations`, `getSuggestions`, `shouldRenderValue`
 
-See [`example/src/App.tsx`](./example/src/App.tsx) for a complete UI example.
+## Group behavior
+
+- Every group owns one logical combinator: `AND` or `OR`.
+- Direct child conditions in the same group reflect that shared combinator.
+- In the example UI, the combinator is selected on the first direct condition row in a group.
+- If a group has no direct condition row yet, the combinator falls back to the group header.
+
+See [`example/src/App.tsx`](./example/src/App.tsx) for a complete recursive UI example.
 
 ## Development
 
 ```bash
 npm install
+npm --prefix example install
 npm run validate
 npm run example
 ```
 
 ## Migration notes
 
-- `properties` became `fields`
-- `initialValue` became `defaultValue`
-- `operation` became `operator`
-- `binding` became `combinator`
-- `createFilterRowProps` was removed in favor of typed update methods and selectors
+- Flat `filters` were replaced by recursive `rootGroup`
+- `addFilter` became `addCondition(groupId)`
+- `removeFilter` became `removeNode(nodeId)`
+- `updateField`, `updateOperator`, and `updateValue` became condition-specific update methods
+- Group combinators now live on `FilterGroup`, not on individual condition rows

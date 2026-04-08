@@ -30,28 +30,44 @@ export type FieldDefinition =
 
 export type PropertyDescription = FieldDefinition;
 
-export interface Filter {
+export interface FilterCondition {
   id: string;
+  kind: 'condition';
   field?: string;
   operator?: OperationType;
   value?: FilterValue;
-  combinator?: Binding;
   type?: FieldType;
 }
 
-export interface FilterDraft {
+export interface FilterConditionDraft {
+  kind?: 'condition';
   field?: string;
   operator?: OperationType;
   value?: FilterValue;
-  combinator?: Binding;
   type?: FieldType;
 }
+
+export interface FilterGroup {
+  id: string;
+  kind: 'group';
+  combinator: Binding;
+  children: FilterNode[];
+}
+
+export interface FilterGroupDraft {
+  kind?: 'group';
+  combinator?: Binding;
+  children?: FilterNodeDraft[];
+}
+
+export type FilterNode = FilterCondition | FilterGroup;
+export type FilterNodeDraft = FilterConditionDraft | FilterGroupDraft;
 
 export interface UseQueryFiltersOptions {
   fields: FieldDefinition[];
-  value?: Filter[];
-  defaultValue?: Array<Filter | FilterDraft>;
-  onChange?: (filters: Filter[]) => void;
+  value?: FilterGroup;
+  defaultValue?: FilterGroup | FilterGroupDraft;
+  onChange?: (rootGroup: FilterGroup) => void;
   defaultCombinator?: Binding;
   operationLabels?: Partial<Record<OperationType, string>>;
   typeOperationsMap?: Partial<Record<FieldType, OperationType[]>>;
@@ -59,28 +75,40 @@ export interface UseQueryFiltersOptions {
 }
 
 export interface UseQueryFiltersResult {
-  filters: Filter[];
+  rootGroup: FilterGroup;
   fieldOptions: SelectOption<string>[];
   combinatorOptions: SelectOption<Binding>[];
   operationLabels: Record<OperationType, string>;
-  addFilter: (draft?: FilterDraft) => void;
-  removeFilter: (filterId: string) => void;
-  updateField: (filterId: string, field?: string) => void;
-  updateOperator: (
-    filterId: string,
+  addCondition: (
+    groupId: string,
+    draft?: FilterConditionDraft
+  ) => void;
+  addGroup: (groupId: string, draft?: FilterGroupDraft) => void;
+  removeNode: (nodeId: string) => void;
+  updateConditionField: (conditionId: string, field?: string) => void;
+  updateConditionOperator: (
+    conditionId: string,
     operator?: OperationType
   ) => void;
-  updateValue: (filterId: string, value?: FilterValue) => void;
-  updateCombinator: (filterId: string, combinator: Binding) => void;
-  replaceFilters: (filters: Filter[]) => void;
+  updateConditionValue: (
+    conditionId: string,
+    value?: FilterValue
+  ) => void;
+  updateGroupCombinator: (
+    groupId: string,
+    combinator: Binding
+  ) => void;
+  replaceTree: (rootGroup: FilterGroup | FilterGroupDraft) => void;
   reset: () => void;
-  getFilter: (filterId: string) => Filter | undefined;
+  getNode: (nodeId: string) => FilterNode | undefined;
+  getGroup: (groupId: string) => FilterGroup | undefined;
+  getCondition: (conditionId: string) => FilterCondition | undefined;
   getFieldDefinition: (
     fieldKey?: string
   ) => FieldDefinition | undefined;
   getAvailableOperations: (
-    filterId: string
+    conditionId: string
   ) => SelectOption<OperationType>[];
-  getSuggestions: (filterId: string) => FilterValue[];
-  shouldRenderValue: (filterId: string) => boolean;
+  getSuggestions: (conditionId: string) => FilterValue[];
+  shouldRenderValue: (conditionId: string) => boolean;
 }

@@ -9,8 +9,12 @@ import {
 import {
   FieldDefinition,
   FieldType,
-  Filter,
-  FilterDraft,
+  FilterCondition,
+  FilterConditionDraft,
+  FilterGroup,
+  FilterGroupDraft,
+  FilterNode,
+  FilterNodeDraft,
   FilterValue,
 } from './types';
 
@@ -65,49 +69,155 @@ export const coerceFilterValue = (
   }
 };
 
-export const normalizeFilter = (
-  filter: Filter | FilterDraft,
-  index: number,
+export const isFilterGroup = (
+  node: FilterNode | FilterNodeDraft
+): node is FilterGroup | FilterGroupDraft =>
+  node.kind === 'group' || 'children' in node || 'combinator' in node;
+
+export const isFilterCondition = (
+  node: FilterNode | FilterNodeDraft
+): node is FilterCondition | FilterConditionDraft =>
+  !isFilterGroup(node);
+
+export const normalizeCondition = (
+  condition: FilterCondition | FilterConditionDraft,
   fields: FieldDefinition[],
-  defaultCombinator: Binding,
   noValueOperations: OperationType[]
-): Filter => {
-  const type = filter.field
-    ? resolveFieldType(fields, filter.field)
-    : filter.type;
-  const operator = filter.operator;
+): FilterCondition => {
+  const type = condition.field
+    ? resolveFieldType(fields, condition.field)
+    : condition.type;
+  const operator = condition.operator;
 
   return {
-    id: 'id' in filter && filter.id ? filter.id : createFilterId(),
-    field: filter.field,
+    id:
+      'id' in condition && condition.id
+        ? condition.id
+        : createFilterId(),
+    kind: 'condition',
+    field: condition.field,
     type,
     operator,
     value:
       operator && noValueOperations.includes(operator)
         ? undefined
-        : coerceFilterValue(filter.value, type),
-    combinator:
-      index === 0
-        ? undefined
-        : (filter.combinator ?? defaultCombinator),
+        : coerceFilterValue(condition.value, type),
   };
 };
 
-export const normalizeFilters = (
-  filters: Array<Filter | FilterDraft>,
+export const normalizeNode = (
+  node: FilterNode | FilterNodeDraft,
+  fields: FieldDefinition[],
+  defaultCombinator: Binding,
+  noValueOperations: OperationType[]
+): FilterNode =>
+  isFilterGroup(node)
+    ? normalizeGroup(
+        node,
+        fields,
+        defaultCombinator,
+        noValueOperations
+      )
+    : normalizeCondition(node, fields, noValueOperations);
+
+export const normalizeGroup = (
+  group: FilterGroup | FilterGroupDraft | undefined,
   fields: FieldDefinition[],
   defaultCombinator: Binding,
   noValueOperations: OperationType[] = defaultNoValueOperations
-) =>
-  filters.map((filter, index) =>
-    normalizeFilter(
-      filter,
-      index,
-      fields,
-      defaultCombinator,
-      noValueOperations
-    )
+): FilterGroup => ({
+  id:
+    group && 'id' in group && group.id ? group.id : createFilterId(),
+  kind: 'group',
+  combinator: group?.combinator ?? defaultCombinator,
+  children: (group?.children ?? []).map((child) =>
+    normalizeNode(child, fields, defaultCombinator, noValueOperations)
+  ),
+});
+
+export const findNodeById = (
+  group: FilterGroup,
+  nodeId: string
+): FilterNode | undefined => {
+  if (group.id === nodeId) {
+    return group;
+  }
+
+  for (const child of group.children) {
+    if (child.id === nodeId) {
+      return child;
+    }
+
+    if (child.kind === 'group') {
+      const nested = findNodeById(child, nodeId);
+
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+
+  return undefined;
+};
+
+export const updateNodeById = (
+  group: FilterGroup,
+  nodeId: string,
+  updater: (node: FilterNode) => FilterNode
+): FilterGroup => {
+  if (group.id === nodeId) {
+    const nextNode = updater(group);
+
+    return nextNode.kind === 'group' ? nextNode : group;
+  }
+
+  return {
+    ...group,
+    children: group.children.map((child) => {
+      if (child.id === nodeId) {
+        return updater(child);
+      }
+
+      if (child.kind === 'group') {
+        return updateNodeById(child, nodeId, updater);
+      }
+
+      return child;
+    }),
+  };
+};
+
+export const appendChildToGroup = (
+  group: FilterGroup,
+  groupId: string,
+  child: FilterNode
+): FilterGroup =>
+  updateNodeById(group, groupId, (node) =>
+    node.kind === 'group'
+      ? {
+          ...node,
+          children: node.children.concat(child),
+        }
+      : node
   );
+
+export const removeNodeById = (
+  group: FilterGroup,
+  nodeId: string
+): FilterGroup => {
+  if (group.id === nodeId) {
+    return group;
+  }
+
+  return {
+    ...group,
+    children: group.children
+      .filter((child) => child.id !== nodeId)
+      .map((child) =>
+        child.kind === 'group' ? removeNodeById(child, nodeId) : child
+      ),
+  };
+};
 
 export const resolveOperationLabels = (
   overrides?: Partial<Record<OperationType, string>>

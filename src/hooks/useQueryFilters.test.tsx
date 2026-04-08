@@ -1,8 +1,12 @@
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Binding } from '../bindings';
 import { OperationType } from '../operations';
-import { FieldDefinition, Filter } from '../types';
+import {
+  FieldDefinition,
+  FilterCondition,
+  FilterGroup,
+} from '../types';
 import { useQueryFilters } from './useQueryFilters';
 
 const fields: FieldDefinition[] = [
@@ -26,99 +30,152 @@ const fields: FieldDefinition[] = [
   },
 ];
 
-const getFirstFilter = (filters: Filter[]) => {
-  const [filter] = filters;
+const getFirstCondition = (group: FilterGroup) => {
+  const condition = group.children.find(
+    (child): child is FilterCondition => child.kind === 'condition'
+  );
 
-  if (!filter) {
-    throw new Error('Expected at least one filter');
+  if (!condition) {
+    throw new Error('Expected group to contain a condition');
   }
 
-  return filter;
+  return condition;
+};
+
+const getFirstGroup = (group: FilterGroup) => {
+  const nestedGroup = group.children.find(
+    (child): child is FilterGroup => child.kind === 'group'
+  );
+
+  if (!nestedGroup) {
+    throw new Error('Expected group to contain a nested group');
+  }
+
+  return nestedGroup;
 };
 
 describe('useQueryFilters', () => {
-  it('creates filters with an invariant first combinator', () => {
+  it('creates nested groups and conditions recursively', () => {
     const { result } = renderHook(() => useQueryFilters({ fields }));
 
     act(() => {
-      result.current.addFilter();
-      result.current.addFilter();
+      result.current.addCondition(result.current.rootGroup.id);
+      result.current.addGroup(result.current.rootGroup.id);
     });
 
-    expect(result.current.filters).toHaveLength(2);
-    expect(result.current.filters[0]?.combinator).toBeUndefined();
-    expect(result.current.filters[1]?.combinator).toBe(Binding.AND);
+    const nestedGroup = getFirstGroup(result.current.rootGroup);
+
+    act(() => {
+      result.current.addCondition(nestedGroup.id, { field: 'age' });
+    });
+
+    const updatedNestedGroup = getFirstGroup(
+      result.current.rootGroup
+    );
+
+    expect(result.current.rootGroup.children).toHaveLength(2);
+    expect(updatedNestedGroup.combinator).toBe(Binding.AND);
+    expect(getFirstCondition(updatedNestedGroup).field).toBe('age');
   });
 
   it('clears operator and value when the field changes', () => {
-    const { result } = renderHook(() => useQueryFilters({ fields }));
-
-    act(() => {
-      result.current.addFilter();
-    });
-
-    const filterId = getFirstFilter(result.current.filters).id;
-
-    act(() => {
-      result.current.updateField(filterId, 'name');
-      result.current.updateOperator(filterId, OperationType.CONTAINS);
-      result.current.updateValue(filterId, 'Ada');
-      result.current.updateField(filterId, 'age');
-    });
-
-    const filter = getFirstFilter(result.current.filters);
-
-    expect(filter.field).toBe('age');
-    expect(filter.type).toBe('number');
-    expect(filter.operator).toBeUndefined();
-    expect(filter.value).toBeUndefined();
-  });
-
-  it('coerces values based on field type and hides no-value operations', () => {
-    const { result } = renderHook(() => useQueryFilters({ fields }));
-
-    act(() => {
-      result.current.addFilter({ field: 'age' });
-    });
-
-    const filterId = getFirstFilter(result.current.filters).id;
-
-    act(() => {
-      result.current.updateOperator(
-        filterId,
-        OperationType.BIGGER_THAN
-      );
-      result.current.updateValue(filterId, '42');
-    });
-
-    expect(getFirstFilter(result.current.filters).value).toBe(42);
-
-    act(() => {
-      result.current.updateOperator(filterId, OperationType.IS_EMPTY);
-    });
-
-    expect(
-      getFirstFilter(result.current.filters).value
-    ).toBeUndefined();
-    expect(result.current.shouldRenderValue(filterId)).toBe(false);
-  });
-
-  it('returns suggestions and available operations from the active field', () => {
     const { result } = renderHook(() =>
       useQueryFilters({
         fields,
-        defaultValue: [{ field: 'isAdmin' }],
+        defaultValue: {
+          kind: 'group',
+          children: [{ kind: 'condition' }],
+        },
       })
     );
 
-    const filterId = getFirstFilter(result.current.filters).id;
+    const conditionId = getFirstCondition(
+      result.current.rootGroup
+    ).id;
 
-    expect(result.current.getSuggestions(filterId)).toStrictEqual([
+    act(() => {
+      result.current.updateConditionField(conditionId, 'name');
+      result.current.updateConditionOperator(
+        conditionId,
+        OperationType.CONTAINS
+      );
+      result.current.updateConditionValue(conditionId, 'Ada');
+      result.current.updateConditionField(conditionId, 'age');
+    });
+
+    const condition = getFirstCondition(result.current.rootGroup);
+
+    expect(condition.field).toBe('age');
+    expect(condition.type).toBe('number');
+    expect(condition.operator).toBeUndefined();
+    expect(condition.value).toBeUndefined();
+  });
+
+  it('coerces values based on field type and hides no-value operations', () => {
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        defaultValue: {
+          kind: 'group',
+          children: [{ kind: 'condition', field: 'age' }],
+        },
+      })
+    );
+
+    const conditionId = getFirstCondition(
+      result.current.rootGroup
+    ).id;
+
+    act(() => {
+      result.current.updateConditionOperator(
+        conditionId,
+        OperationType.BIGGER_THAN
+      );
+      result.current.updateConditionValue(conditionId, '42');
+    });
+
+    expect(getFirstCondition(result.current.rootGroup).value).toBe(
+      42
+    );
+
+    act(() => {
+      result.current.updateConditionOperator(
+        conditionId,
+        OperationType.IS_EMPTY
+      );
+    });
+
+    expect(
+      getFirstCondition(result.current.rootGroup).value
+    ).toBeUndefined();
+    expect(result.current.shouldRenderValue(conditionId)).toBe(false);
+  });
+
+  it('returns suggestions and available operations for nested conditions', () => {
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        defaultValue: {
+          kind: 'group',
+          children: [
+            {
+              kind: 'group',
+              children: [{ kind: 'condition', field: 'isAdmin' }],
+            },
+          ],
+        },
+      })
+    );
+
+    const nestedGroup = getFirstGroup(result.current.rootGroup);
+    const conditionId = getFirstCondition(nestedGroup).id;
+
+    expect(result.current.getSuggestions(conditionId)).toStrictEqual([
       true,
       false,
     ]);
     expect(
-      result.current.getAvailableOperations(filterId)
+      result.current.getAvailableOperations(conditionId)
     ).toStrictEqual([
       {
         label: 'is',
@@ -127,16 +184,40 @@ describe('useQueryFilters', () => {
     ]);
   });
 
-  it('supports controlled usage through value and onChange', () => {
+  it('updates the combinator on a nested group', () => {
+    const { result } = renderHook(() => useQueryFilters({ fields }));
+
+    act(() => {
+      result.current.addGroup(result.current.rootGroup.id);
+    });
+
+    const nestedGroupId = getFirstGroup(result.current.rootGroup).id;
+
+    act(() => {
+      result.current.updateGroupCombinator(nestedGroupId, Binding.OR);
+    });
+
+    expect(getFirstGroup(result.current.rootGroup).combinator).toBe(
+      Binding.OR
+    );
+  });
+
+  it('supports controlled usage through rootGroup and onChange', () => {
     const onChange = vi.fn();
-    const controlledValue = [
-      {
-        id: 'static-id',
-        field: 'name',
-        operator: OperationType.IS,
-        value: 'Ada',
-      },
-    ];
+    const controlledValue: FilterGroup = {
+      id: 'root',
+      kind: 'group',
+      combinator: Binding.AND,
+      children: [
+        {
+          id: 'condition-1',
+          kind: 'condition',
+          field: 'name',
+          operator: OperationType.IS,
+          value: 'Ada',
+        },
+      ],
+    };
     const { result } = renderHook(() =>
       useQueryFilters({
         fields,
@@ -146,18 +227,23 @@ describe('useQueryFilters', () => {
     );
 
     act(() => {
-      result.current.updateValue('static-id', 'Linus');
+      result.current.updateConditionValue('condition-1', 'Linus');
     });
 
-    expect(onChange).toHaveBeenCalledWith([
-      {
-        id: 'static-id',
-        field: 'name',
-        operator: OperationType.IS,
-        value: 'Linus',
-        type: 'string',
-        combinator: undefined,
-      },
-    ]);
+    expect(onChange).toHaveBeenCalledWith({
+      id: 'root',
+      kind: 'group',
+      combinator: Binding.AND,
+      children: [
+        {
+          id: 'condition-1',
+          kind: 'condition',
+          field: 'name',
+          operator: OperationType.IS,
+          value: 'Linus',
+          type: 'string',
+        },
+      ],
+    });
   });
 });

@@ -41,7 +41,7 @@ select {
   border-radius: 24px;
   background: rgba(15, 23, 42, 0.82);
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
-  padding: 24px;
+  padding: 20px;
   backdrop-filter: blur(16px);
 }
 
@@ -62,20 +62,33 @@ select {
   font-size: 0.8rem;
 }
 
-.toolbar {
-  margin: 24px 0 12px;
-}
-
-.filters {
-  display: grid;
-  gap: 12px;
-}
-
 .row {
   display: grid;
   grid-template-columns: 88px repeat(3, minmax(0, 1fr)) auto;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.group-shell {
+  margin-top: 16px;
+}
+
+.group-header {
+  display: flex;
   gap: 12px;
   align-items: center;
+  justify-content: space-between;
+}
+
+.group-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.group-children {
+  margin-top: 10px;
 }
 
 .where {
@@ -86,12 +99,13 @@ select {
 .select,
 .input,
 .button {
-  border-radius: 14px;
+  border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(30, 41, 59, 0.85);
   color: inherit;
-  min-height: 44px;
-  padding: 0 14px;
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 0.92rem;
 }
 
 .button {
@@ -101,15 +115,44 @@ select {
   font-weight: 700;
 }
 
+.button-icon {
+  min-width: 0;
+  padding: 0 10px;
+  font-size: 0.88rem;
+  line-height: 1;
+}
+
+.select-compact {
+  min-width: 72px;
+}
+
 .button-secondary {
   background: rgba(51, 65, 85, 0.95);
+}
+
+.button-danger {
+  background: rgba(127, 29, 29, 0.95);
 }
 
 .checkbox {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
+  min-height: 34px;
+}
+
+.combinator-pill,
+.value-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: rgba(51, 65, 85, 0.95);
+  color: #cbd5e1;
+  font-weight: 700;
+  font-size: 0.9rem;
 }
 
 .panel-code pre {

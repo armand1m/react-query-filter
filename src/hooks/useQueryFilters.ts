@@ -1,13 +1,16 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Binding, defaultBindingOptions } from '../bindings';
 import {
+  appendChildToGroup,
   createFieldOption,
-  createFilterId,
-  normalizeFilter,
-  normalizeFilters,
+  findNodeById,
+  normalizeCondition,
+  normalizeGroup,
+  removeNodeById,
   resolveFieldDefinition,
   resolveOperationLabels,
   resolveTypeOperationsMap,
+  updateNodeById,
 } from '../core';
 import {
   defaultNoValueOperations,
@@ -16,49 +19,33 @@ import {
 } from '../operations';
 import { SelectOption } from '../select-option';
 import {
-  FieldDefinition,
-  Filter,
-  FilterDraft,
+  FilterCondition,
+  FilterConditionDraft,
+  FilterGroup,
+  FilterGroupDraft,
+  FilterNode,
   FilterValue,
   UseQueryFiltersOptions,
   UseQueryFiltersResult,
 } from '../types';
 
 const removeValueForOperator = (
-  filter: Filter,
+  condition: FilterCondition,
   operator: OperationType | undefined,
   noValueOperations: OperationType[]
 ) => ({
-  ...filter,
+  ...condition,
   operator,
   value:
     operator && noValueOperations.includes(operator)
       ? undefined
-      : filter.value,
+      : condition.value,
 });
-
-const normalizeDraft = (
-  draft: FilterDraft | undefined,
-  index: number,
-  fields: FieldDefinition[],
-  defaultCombinator: Binding,
-  noValueOperations: OperationType[]
-) =>
-  normalizeFilter(
-    {
-      id: createFilterId(),
-      ...draft,
-    },
-    index,
-    fields,
-    defaultCombinator,
-    noValueOperations
-  );
 
 export const useQueryFilters = ({
   fields,
   value,
-  defaultValue = [],
+  defaultValue,
   onChange,
   defaultCombinator = Binding.AND,
   operationLabels: operationLabelOverrides,
@@ -79,9 +66,9 @@ export const useQueryFilters = ({
     () => resolveTypeOperationsMap(typeOperationsOverrides),
     [typeOperationsOverrides]
   );
-  const defaultFilters = useMemo(
+  const defaultRootGroup = useMemo(
     () =>
-      normalizeFilters(
+      normalizeGroup(
         defaultValue,
         fields,
         defaultCombinator,
@@ -89,12 +76,12 @@ export const useQueryFilters = ({
       ),
     [defaultValue, fields, defaultCombinator, noValueOperations]
   );
-  const [internalFilters, setInternalFilters] =
-    useState(defaultFilters);
-  const controlledFilters = useMemo(
+  const [internalRootGroup, setInternalRootGroup] =
+    useState(defaultRootGroup);
+  const controlledRootGroup = useMemo(
     () =>
       isControlled
-        ? normalizeFilters(
+        ? normalizeGroup(
             value,
             fields,
             defaultCombinator,
@@ -109,26 +96,26 @@ export const useQueryFilters = ({
       value,
     ]
   );
-  const filters = controlledFilters ?? internalFilters;
-  const filtersRef = useRef(filters);
-  filtersRef.current = filters;
+  const rootGroup = controlledRootGroup ?? internalRootGroup;
+  const rootGroupRef = useRef(rootGroup);
+  rootGroupRef.current = rootGroup;
 
   const commit = useCallback(
-    (nextFilters: Filter[]) => {
-      filtersRef.current = nextFilters;
+    (nextRootGroup: FilterGroup) => {
+      rootGroupRef.current = nextRootGroup;
 
       if (!isControlled) {
-        setInternalFilters(nextFilters);
+        setInternalRootGroup(nextRootGroup);
       }
 
-      onChange?.(nextFilters);
+      onChange?.(nextRootGroup);
     },
     [isControlled, onChange]
   );
 
-  const updateFilters = useCallback(
-    (updater: (current: Filter[]) => Filter[]) => {
-      commit(updater(filtersRef.current));
+  const updateTree = useCallback(
+    (updater: (current: FilterGroup) => FilterGroup) => {
+      commit(updater(rootGroupRef.current));
     },
     [commit]
   );
@@ -138,53 +125,95 @@ export const useQueryFilters = ({
     [fields]
   );
 
-  const getFilter = useCallback(
-    (filterId: string) =>
-      filters.find((filter) => filter.id === filterId),
-    [filters]
+  const getNode = useCallback(
+    (nodeId: string): FilterNode | undefined =>
+      findNodeById(rootGroup, nodeId),
+    [rootGroup]
+  );
+
+  const getGroup = useCallback(
+    (groupId: string): FilterGroup | undefined => {
+      const node = getNode(groupId);
+
+      return node?.kind === 'group' ? node : undefined;
+    },
+    [getNode]
+  );
+
+  const getCondition = useCallback(
+    (conditionId: string): FilterCondition | undefined => {
+      const node = getNode(conditionId);
+
+      return node?.kind === 'condition' ? node : undefined;
+    },
+    [getNode]
   );
 
   const getAvailableOperations = useCallback(
-    (filterId: string): SelectOption<OperationType>[] => {
-      const filter = getFilter(filterId);
-      const filterType = filter?.type ?? 'string';
+    (conditionId: string): SelectOption<OperationType>[] => {
+      const condition = getCondition(conditionId);
+      const fieldType = condition?.type ?? 'string';
       const operations =
-        typeOperationsMap[filterType] ?? typeOperationsMap.string;
+        typeOperationsMap[fieldType] ?? typeOperationsMap.string;
 
       return operations.map((operation) =>
         mapOperationToSelectOption(operation, operationLabels)
       );
     },
-    [getFilter, operationLabels, typeOperationsMap]
+    [getCondition, operationLabels, typeOperationsMap]
   );
 
   const getSuggestions = useCallback(
-    (filterId: string): FilterValue[] => {
-      const filter = getFilter(filterId);
+    (conditionId: string): FilterValue[] => {
+      const condition = getCondition(conditionId);
 
-      return getFieldDefinition(filter?.field)?.suggestions ?? [];
+      return getFieldDefinition(condition?.field)?.suggestions ?? [];
     },
-    [getFieldDefinition, getFilter]
+    [getCondition, getFieldDefinition]
   );
 
   const shouldRenderValue = useCallback(
-    (filterId: string) => {
-      const filter = getFilter(filterId);
+    (conditionId: string) => {
+      const condition = getCondition(conditionId);
 
-      return filter?.operator
-        ? !noValueOperations.includes(filter.operator)
+      return condition?.operator
+        ? !noValueOperations.includes(condition.operator)
         : true;
     },
-    [getFilter, noValueOperations]
+    [getCondition, noValueOperations]
   );
 
-  const addFilter = useCallback(
-    (draft?: FilterDraft) => {
-      updateFilters((current) =>
-        current.concat(
-          normalizeDraft(
-            draft,
-            current.length,
+  const addCondition = useCallback(
+    (groupId: string, draft?: FilterConditionDraft) => {
+      updateTree((current) =>
+        appendChildToGroup(
+          current,
+          groupId,
+          normalizeCondition(
+            {
+              kind: 'condition',
+              ...draft,
+            },
+            fields,
+            noValueOperations
+          )
+        )
+      );
+    },
+    [fields, noValueOperations, updateTree]
+  );
+
+  const addGroup = useCallback(
+    (groupId: string, draft?: FilterGroupDraft) => {
+      updateTree((current) =>
+        appendChildToGroup(
+          current,
+          groupId,
+          normalizeGroup(
+            {
+              kind: 'group',
+              ...draft,
+            },
             fields,
             defaultCombinator,
             noValueOperations
@@ -192,120 +221,101 @@ export const useQueryFilters = ({
         )
       );
     },
-    [defaultCombinator, fields, noValueOperations, updateFilters]
+    [defaultCombinator, fields, noValueOperations, updateTree]
   );
 
-  const removeFilter = useCallback(
-    (filterId: string) => {
-      updateFilters((current) =>
-        normalizeFilters(
-          current.filter((filter) => filter.id !== filterId),
-          fields,
-          defaultCombinator,
-          noValueOperations
-        )
-      );
+  const removeNode = useCallback(
+    (nodeId: string) => {
+      updateTree((current) => removeNodeById(current, nodeId));
     },
-    [defaultCombinator, fields, noValueOperations, updateFilters]
+    [updateTree]
   );
 
-  const updateField = useCallback(
-    (filterId: string, field?: string) => {
-      updateFilters((current) =>
-        current.map((filter, index) =>
-          filter.id === filterId
-            ? normalizeFilter(
+  const updateConditionField = useCallback(
+    (conditionId: string, field?: string) => {
+      updateTree((current) =>
+        updateNodeById(current, conditionId, (node) =>
+          node.kind === 'condition'
+            ? normalizeCondition(
                 {
-                  ...filter,
+                  ...node,
                   field,
                   type: undefined,
                   operator: undefined,
                   value: undefined,
                 },
-                index,
                 fields,
-                defaultCombinator,
                 noValueOperations
               )
-            : filter
+            : node
         )
       );
     },
-    [defaultCombinator, fields, noValueOperations, updateFilters]
+    [fields, noValueOperations, updateTree]
   );
 
-  const updateOperator = useCallback(
-    (filterId: string, operator?: OperationType) => {
-      updateFilters((current) =>
-        current.map((filter, index) =>
-          filter.id === filterId
-            ? normalizeFilter(
+  const updateConditionOperator = useCallback(
+    (conditionId: string, operator?: OperationType) => {
+      updateTree((current) =>
+        updateNodeById(current, conditionId, (node) =>
+          node.kind === 'condition'
+            ? normalizeCondition(
                 removeValueForOperator(
-                  filter,
+                  node,
                   operator,
                   noValueOperations
                 ),
-                index,
                 fields,
-                defaultCombinator,
                 noValueOperations
               )
-            : filter
+            : node
         )
       );
     },
-    [defaultCombinator, fields, noValueOperations, updateFilters]
+    [fields, noValueOperations, updateTree]
   );
 
-  const updateValue = useCallback(
-    (filterId: string, value?: FilterValue) => {
-      updateFilters((current) =>
-        current.map((filter, index) =>
-          filter.id === filterId
-            ? normalizeFilter(
+  const updateConditionValue = useCallback(
+    (conditionId: string, value?: FilterValue) => {
+      updateTree((current) =>
+        updateNodeById(current, conditionId, (node) =>
+          node.kind === 'condition'
+            ? normalizeCondition(
                 {
-                  ...filter,
+                  ...node,
                   value,
                 },
-                index,
                 fields,
-                defaultCombinator,
                 noValueOperations
               )
-            : filter
+            : node
         )
       );
     },
-    [defaultCombinator, fields, noValueOperations, updateFilters]
+    [fields, noValueOperations, updateTree]
   );
 
-  const updateCombinator = useCallback(
-    (filterId: string, combinator: Binding) => {
-      updateFilters((current) =>
-        current.map((filter, index) =>
-          filter.id === filterId
-            ? normalizeFilter(
-                {
-                  ...filter,
-                  combinator,
-                },
-                index,
-                fields,
-                defaultCombinator,
-                noValueOperations
-              )
-            : filter
+  const updateGroupCombinator = useCallback(
+    (groupId: string, combinator: Binding) => {
+      updateTree((current) =>
+        updateNodeById(current, groupId, (node) =>
+          node.kind === 'group'
+            ? {
+                ...node,
+                combinator,
+              }
+            : node
         )
       );
     },
-    [defaultCombinator, fields, noValueOperations, updateFilters]
+    [updateTree]
   );
 
-  const replaceFilters = useCallback(
-    (nextFilters: Filter[]) => {
+  const replaceTree = useCallback(
+    (nextRootGroup: FilterGroup | FilterGroupDraft) => {
       commit(
-        normalizeFilters(
-          nextFilters,
+        normalizeGroup(
+          nextRootGroup,
           fields,
           defaultCombinator,
           noValueOperations
@@ -316,23 +326,26 @@ export const useQueryFilters = ({
   );
 
   const reset = useCallback(() => {
-    commit(defaultFilters);
-  }, [commit, defaultFilters]);
+    commit(defaultRootGroup);
+  }, [commit, defaultRootGroup]);
 
   return {
-    filters,
+    rootGroup,
     fieldOptions,
     combinatorOptions,
     operationLabels,
-    addFilter,
-    removeFilter,
-    updateField,
-    updateOperator,
-    updateValue,
-    updateCombinator,
-    replaceFilters,
+    addCondition,
+    addGroup,
+    removeNode,
+    updateConditionField,
+    updateConditionOperator,
+    updateConditionValue,
+    updateGroupCombinator,
+    replaceTree,
     reset,
-    getFilter,
+    getNode,
+    getGroup,
+    getCondition,
     getFieldDefinition,
     getAvailableOperations,
     getSuggestions,
