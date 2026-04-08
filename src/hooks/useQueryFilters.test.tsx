@@ -1,238 +1,300 @@
-import { act, renderHook } from '@testing-library/react-hooks';
-import { ChangeEvent } from 'react';
+import { act, renderHook } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { Binding } from '../bindings';
+import { OperationType } from '../operations';
 import {
-  defaultTypeOperationsMap,
-  defaultOperationLabels,
-  mapOperationToSelectOption,
-  OperationType,
-} from '../operations';
-import { Filter } from '../types';
-import { useQueryFilters, HookProps } from './useQueryFilters';
+  FieldDefinition,
+  FilterCondition,
+  FilterGroup,
+} from '../types';
+import { useQueryFilters } from './useQueryFilters';
 
-const properties: HookProps['properties'] = [
+const fields: FieldDefinition[] = [
   {
-    label: 'Name',
     key: 'name',
+    label: 'Name',
     type: 'string',
-    suggestions: ['Artemis', 'Apollo', 'Donna', 'Dhio'],
+    suggestions: ['Ada', 'Linus'],
   },
   {
-    label: 'Age',
     key: 'age',
+    label: 'Age',
     type: 'number',
-    suggestions: [1, 2, 3],
+    suggestions: [18, 42],
   },
   {
-    label: 'Has Owner',
-    key: 'has_owner',
+    key: 'isAdmin',
+    label: 'Is Admin',
     type: 'boolean',
+    suggestions: [true, false],
   },
 ];
 
-const createTestFilter = () => {
-  const { result } = renderHook(() => useQueryFilters({ properties }));
+const getFirstCondition = (group: FilterGroup) => {
+  const condition = group.children.find(
+    (child): child is FilterCondition => child.kind === 'condition'
+  );
 
-  expect(result.current.filters).toHaveLength(0);
+  if (!condition) {
+    throw new Error('Expected group to contain a condition');
+  }
 
-  act(() => {
-    result.current.onAddFilter();
-  });
+  return condition;
+};
 
-  expect(result.current.filters).toHaveLength(1);
+const getFirstGroup = (group: FilterGroup) => {
+  const nestedGroup = group.children.find(
+    (child): child is FilterGroup => child.kind === 'group'
+  );
 
-  return result;
+  if (!nestedGroup) {
+    throw new Error('Expected group to contain a nested group');
+  }
+
+  return nestedGroup;
 };
 
 describe('useQueryFilters', () => {
-  it('should initialize state with empty filters array', () => {
-    const { result } = renderHook(() => useQueryFilters({ properties }));
+  it('creates nested groups and conditions recursively', () => {
+    const { result } = renderHook(() => useQueryFilters({ fields }));
 
-    expect(result.current.filters).toStrictEqual([]);
-  });
+    act(() => {
+      result.current.addCondition(result.current.rootGroup.id);
+      result.current.addGroup(result.current.rootGroup.id);
+    });
 
-  it('should add empty filter when invoking the onAddFilter function', () => {
-    createTestFilter();
-  });
+    const nestedGroup = getFirstGroup(result.current.rootGroup);
 
-  it('should initialize using a given initial state', () => {
-    const initialValue: Filter[] = [
-      {
-        id: '35f924a2-9e1d-423c-8565-41619a5b8e8e',
-        field: 'name',
-        operation: OperationType.IS,
-        value: 'Artemis',
-        type: 'string',
-      },
-      {
-        id: '91f7e872-f0e9-4fdf-8db1-6b51c0670817',
-        binding: Binding.AND,
-      },
-    ];
-    const { result } = renderHook(() =>
-      useQueryFilters({ initialValue, properties })
+    act(() => {
+      result.current.addCondition(nestedGroup.id, { field: 'age' });
+    });
+
+    const updatedNestedGroup = getFirstGroup(
+      result.current.rootGroup
     );
 
-    expect(result.current.filters).toStrictEqual(initialValue);
+    expect(result.current.rootGroup.children).toHaveLength(2);
+    expect(updatedNestedGroup.combinator).toBe(Binding.AND);
+    expect(getFirstCondition(updatedNestedGroup).field).toBe('age');
   });
 
-  describe('createFilterRowProps', () => {
-    it('should return the string operation choices by default if the filter has no field selected', () => {
-      const result = createTestFilter();
-      const rowProps = result.current.createFilterRowProps(0);
-      const expectedOperations = defaultTypeOperationsMap.string.map(
-        operation => {
-          return mapOperationToSelectOption(operation, defaultOperationLabels);
-        }
-      );
-      expect(rowProps.operations).toStrictEqual(expectedOperations);
-    });
-
-    it('should set the field when invoking onChangeField', () => {
-      const result = createTestFilter();
-      const initialRowProps = result.current.createFilterRowProps(0);
-      const fields = initialRowProps.fields;
-      const nextField = fields[0];
-
-      act(() => {
-        initialRowProps.selectStates.onChangeField(nextField);
-      });
-
-      const updatedRowProps = result.current.createFilterRowProps(0);
-
-      expect(updatedRowProps.filter.field).toBe(nextField.value);
-    });
-
-    it('should set the operation when invoking onChangeOperation', () => {
-      const result = createTestFilter();
-      const initialRowProps = result.current.createFilterRowProps(0);
-      const operations = initialRowProps.operations;
-      const nextOperation = operations[0];
-
-      act(() => {
-        initialRowProps.selectStates.onChangeOperation(nextOperation);
-      });
-
-      const updatedRowProps = result.current.createFilterRowProps(0);
-
-      expect(updatedRowProps.filter.operation).toBe(nextOperation.value);
-    });
-
-    it('should force the first filter to always have the binding set as "undefined"', () => {
-      const result = createTestFilter();
-      const initialRowProps = result.current.createFilterRowProps(0);
-      const orBinding = initialRowProps.bindings[1];
-
-      act(() => {
-        initialRowProps.selectStates.onChangeBinding(orBinding);
-      });
-
-      const updatedRowProps = result.current.createFilterRowProps(0);
-
-      expect(updatedRowProps.filter.binding).toBe(undefined);
-      expect(updatedRowProps.shouldRenderBindingSelect).toBeFalsy();
-    });
-
-    it('should set the binding if the filter being is not the first one', () => {
-      const result = createTestFilter();
-
-      act(() => {
-        result.current.onAddFilter();
-      });
-
-      expect(result.current.filters).toHaveLength(2);
-
-      const initialRowProps = result.current.createFilterRowProps(1);
-      const orBinding = initialRowProps.bindings[1];
-
-      act(() => {
-        initialRowProps.selectStates.onChangeBinding(orBinding);
-      });
-
-      const updatedRowProps = result.current.createFilterRowProps(1);
-
-      expect(updatedRowProps.filter.binding).toBe(orBinding.value);
-    });
-
-    it('should remove an existing row', () => {
-      const result = createTestFilter();
-      const rowProps = result.current.createFilterRowProps(0);
-
-      act(() => {
-        rowProps.onRemove();
-      });
-
-      expect(result.current.filters).toHaveLength(0);
-    });
-
-    it('should set the filter value to the event target value when invoking the onChangeValue function in a filter with string type', () => {
-      const result = createTestFilter();
-      const initialRowProps = result.current.createFilterRowProps(0);
-
-      const changeEvent = {
-        target: {
-          value: 'example value change',
+  it('clears operator and value when the field changes', () => {
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        defaultValue: {
+          kind: 'group',
+          children: [{ kind: 'condition' }],
         },
-      } as ChangeEvent<HTMLInputElement>;
+      })
+    );
 
-      act(() => {
-        initialRowProps.onChangeValue(changeEvent);
-      });
+    const conditionId = getFirstCondition(
+      result.current.rootGroup
+    ).id;
 
-      const updatedRowProps = result.current.createFilterRowProps(0);
-
-      expect(updatedRowProps.filter.value).toBe(changeEvent.target.value);
-    });
-
-    it('should set the filter value to the event target checked property when invoking the onChangeValue function in a filter with boolean type', () => {
-      const result = createTestFilter();
-      const initialRowProps = result.current.createFilterRowProps(0);
-      const fields = initialRowProps.fields;
-      const nextField = fields.find(field => field.value === 'has_owner');
-
-      if (!nextField) {
-        throw new Error('Failed to find owner field');
-      }
-
-      act(() => {
-        initialRowProps.selectStates.onChangeField(nextField);
-      });
-
-      let updatedRowProps = result.current.createFilterRowProps(0);
-
-      expect(updatedRowProps.filter.type).toBe('boolean');
-
-      const changeEvent = {
-        target: {
-          checked: true,
-        },
-      } as ChangeEvent<HTMLInputElement>;
-
-      act(() => {
-        updatedRowProps.onChangeValue(changeEvent);
-      });
-
-      updatedRowProps = result.current.createFilterRowProps(0);
-
-      expect(updatedRowProps.filter.value).toBe(changeEvent.target.checked);
-    });
-
-    it('should clear the filter value when the operation does not require a value to be set', () => {
-      const result = createTestFilter();
-      const initialRowProps = result.current.createFilterRowProps(0);
-      const emptyOperation = mapOperationToSelectOption(
-        OperationType.IS_EMPTY,
-        defaultOperationLabels
+    act(() => {
+      result.current.updateConditionField(conditionId, 'name');
+      result.current.updateConditionOperator(
+        conditionId,
+        OperationType.CONTAINS
       );
+      result.current.updateConditionValue(conditionId, 'Ada');
+      result.current.updateConditionField(conditionId, 'age');
+    });
 
-      act(() => {
-        initialRowProps.selectStates.onChangeOperation(emptyOperation);
-      });
+    const condition = getFirstCondition(result.current.rootGroup);
 
-      const updatedRowProps = result.current.createFilterRowProps(0);
+    expect(condition.field).toBe('age');
+    expect(condition.type).toBe('number');
+    expect(condition.operator).toBeUndefined();
+    expect(condition.value).toBeUndefined();
+  });
 
-      expect(updatedRowProps.filter.value).toBeUndefined();
-      expect(updatedRowProps.shouldRenderValueInput).toBeFalsy();
+  it('coerces values based on field type and hides no-value operations', () => {
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        defaultValue: {
+          kind: 'group',
+          children: [{ kind: 'condition', field: 'age' }],
+        },
+      })
+    );
+
+    const conditionId = getFirstCondition(
+      result.current.rootGroup
+    ).id;
+
+    act(() => {
+      result.current.updateConditionOperator(
+        conditionId,
+        OperationType.BIGGER_THAN
+      );
+      result.current.updateConditionValue(conditionId, '42');
+    });
+
+    expect(getFirstCondition(result.current.rootGroup).value).toBe(
+      42
+    );
+
+    act(() => {
+      result.current.updateConditionOperator(
+        conditionId,
+        OperationType.IS_EMPTY
+      );
+    });
+
+    expect(
+      getFirstCondition(result.current.rootGroup).value
+    ).toBeUndefined();
+    expect(result.current.shouldRenderValue(conditionId)).toBe(false);
+  });
+
+  it('returns suggestions and available operations for nested conditions', () => {
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        defaultValue: {
+          kind: 'group',
+          children: [
+            {
+              kind: 'group',
+              children: [{ kind: 'condition', field: 'isAdmin' }],
+            },
+          ],
+        },
+      })
+    );
+
+    const nestedGroup = getFirstGroup(result.current.rootGroup);
+    const conditionId = getFirstCondition(nestedGroup).id;
+
+    expect(result.current.getSuggestions(conditionId)).toStrictEqual([
+      true,
+      false,
+    ]);
+    expect(
+      result.current.getAvailableOperations(conditionId)
+    ).toStrictEqual([
+      {
+        label: 'is',
+        value: OperationType.IS,
+      },
+    ]);
+  });
+
+  it('parses string boolean payloads explicitly in default values', () => {
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        defaultValue: {
+          kind: 'group',
+          children: [
+            {
+              kind: 'condition',
+              field: 'isAdmin',
+              operator: OperationType.IS,
+              value: 'false',
+            },
+          ],
+        },
+      })
+    );
+
+    expect(getFirstCondition(result.current.rootGroup).value).toBe(
+      false
+    );
+  });
+
+  it('parses string boolean payloads explicitly on updates', () => {
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        defaultValue: {
+          kind: 'group',
+          children: [{ kind: 'condition', field: 'isAdmin' }],
+        },
+      })
+    );
+
+    const conditionId = getFirstCondition(
+      result.current.rootGroup
+    ).id;
+
+    act(() => {
+      result.current.updateConditionOperator(
+        conditionId,
+        OperationType.IS
+      );
+      result.current.updateConditionValue(conditionId, 'false');
+    });
+
+    expect(getFirstCondition(result.current.rootGroup).value).toBe(
+      false
+    );
+  });
+
+  it('updates the combinator on a nested group', () => {
+    const { result } = renderHook(() => useQueryFilters({ fields }));
+
+    act(() => {
+      result.current.addGroup(result.current.rootGroup.id);
+    });
+
+    const nestedGroupId = getFirstGroup(result.current.rootGroup).id;
+
+    act(() => {
+      result.current.updateGroupCombinator(nestedGroupId, Binding.OR);
+    });
+
+    expect(getFirstGroup(result.current.rootGroup).combinator).toBe(
+      Binding.OR
+    );
+  });
+
+  it('supports controlled usage through rootGroup and onChange', () => {
+    const onChange = vi.fn();
+    const controlledValue: FilterGroup = {
+      id: 'root',
+      kind: 'group',
+      combinator: Binding.AND,
+      children: [
+        {
+          id: 'condition-1',
+          kind: 'condition',
+          field: 'name',
+          operator: OperationType.IS,
+          value: 'Ada',
+        },
+      ],
+    };
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        value: controlledValue,
+        onChange,
+      })
+    );
+
+    act(() => {
+      result.current.updateConditionValue('condition-1', 'Linus');
+    });
+
+    expect(onChange).toHaveBeenCalledWith({
+      id: 'root',
+      kind: 'group',
+      combinator: Binding.AND,
+      children: [
+        {
+          id: 'condition-1',
+          kind: 'condition',
+          field: 'name',
+          operator: OperationType.IS,
+          value: 'Linus',
+          type: 'string',
+        },
+      ],
     });
   });
 });

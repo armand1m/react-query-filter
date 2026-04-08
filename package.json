@@ -1,97 +1,77 @@
 {
-  "version": "0.0.0-development",
-  "license": "MIT",
-  "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
-  "engines": {
-    "node": ">=10"
-  },
-  "scripts": {
-    "start": "tsdx watch",
-    "build": "tsdx build",
-    "test": "tsdx test --passWithNoTests",
-    "lint": "tsdx lint",
-    "prepare": "tsdx build",
-    "size": "size-limit",
-    "analyze": "size-limit --why",
-    "storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook",
-    "pack:inspect": "yarn pack && tar -ztvf *.tgz",
-    "semantic-release": "semantic-release"
-  },
-  "peerDependencies": {
-    "@chakra-ui/react": "^1.0.4",
-    "@emotion/react": "^11.1.4",
-    "@emotion/styled": "^11.0.0",
-    "framer-motion": "^3.1.1",
-    "react": ">=16"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "tsdx test"
-    }
-  },
-  "prettier": {
-    "printWidth": 80,
-    "semi": true,
-    "singleQuote": true,
-    "trailingComma": "es5"
-  },
-  "resolutions": {
-    "**/@typescript-eslint/eslint-plugin": "^4.1.1",
-    "**/@typescript-eslint/parser": "^4.1.1"
-  },
   "name": "react-query-filter",
+  "version": "0.0.0-development",
+  "description": "Headless query-builder hooks for React applications.",
+  "license": "MIT",
   "author": "Armando Magalhães",
-  "module": "dist/react-query-filter.esm.js",
-  "size-limit": [
-    {
-      "path": "dist/react-query-filter.cjs.production.min.js",
-      "limit": "10 KB"
-    },
-    {
-      "path": "dist/react-query-filter.esm.js",
-      "limit": "10 KB"
-    }
-  ],
-  "devDependencies": {
-    "@babel/core": "^7.12.10",
-    "@chakra-ui/icons": "^1.0.2",
-    "@chakra-ui/react": "^1.0.4",
-    "@emotion/react": "^11.1.4",
-    "@emotion/styled": "^11.0.0",
-    "@size-limit/preset-small-lib": "^4.9.1",
-    "@storybook/addon-essentials": "^6.2.9",
-    "@storybook/addon-links": "^6.2.9",
-    "@storybook/addons": "^6.2.9",
-    "@storybook/react": "^6.2.9",
-    "@testing-library/react-hooks": "^7.0.0",
-    "@types/react": "^17.0.0",
-    "@types/react-dom": "^17.0.0",
-    "@types/react-select": "^3.0.28",
-    "@types/uuid": "^8.3.0",
-    "babel-loader": "^8.2.2",
-    "framer-motion": "^3.1.1",
-    "husky": "^4.3.6",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
-    "react-is": "^17.0.1",
-    "react-select": "^3.1.1",
-    "semantic-release": "^17.3.1",
-    "size-limit": "^4.9.1",
-    "tsdx": "^0.14.1",
-    "tslib": "^2.0.3",
-    "typescript": "^4.3.4"
-  },
-  "dependencies": {
-    "uuid": "^8.3.2"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/armand1m/react-query-filter.git"
+  },
+  "homepage": "https://github.com/armand1m/react-query-filter#readme",
+  "bugs": {
+    "url": "https://github.com/armand1m/react-query-filter/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "npm@10.9.2",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist coverage",
+    "dev": "tsup src/index.tsx --format esm,cjs --dts --watch",
+    "build": "npm run clean && tsup src/index.tsx --format esm,cjs --dts",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p example/tsconfig.json",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "lint": "eslint src example/src --ext .ts,.tsx",
+    "format": "prettier --write .",
+    "check": "prettier --check .",
+    "validate": "npm run check && npm run lint && npm run typecheck && npm run test && npm run build",
+    "example": "npm --prefix example run dev",
+    "example:build": "npm --prefix example run build",
+    "prepare": "npm run build"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.24.0",
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitest/coverage-v8": "^3.1.1",
+    "eslint": "^9.24.0",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "jsdom": "^26.0.0",
+    "prettier": "^3.5.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.29.0",
+    "vite": "^6.2.4",
+    "vitest": "^3.1.1"
   },
   "release": {
     "branches": [
