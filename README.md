@@ -183,3 +183,13 @@ npm --prefix example install
 npm run validate
 npm run example
 ```
+
+## Release automation
+
+Releases are automated with Release Please on `main`. Maintainers do not hand-edit `CHANGELOG.md` or bump `package.json` versions for normal releases.
+
+- Merge Conventional Commit PRs into `main`.
+- Release Please opens or updates a release PR with the changelog and next version.
+- Merging the release PR creates the GitHub Release and publishes to npm with trusted publishing and provenance.
+
+Pull requests also get a release preview comment that shows the likely bump from the PR commits and the projected next release if merged now. Keep the PR title in Conventional Commit format so the preview and release history stay readable.

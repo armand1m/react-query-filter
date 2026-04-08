@@ -1,0 +1,341 @@
+name: pr-metadata
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: pr-metadata-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate PR title
+        id: semantic_pr
+        continue-on-error: true
+        uses: amannn/action-semantic-pull-request@v6
+        with:
+          types: |
+            feat
+            fix
+            deps
+            refactor
+            perf
+            docs
+            test
+            chore
+            ci
+            build
+            revert
+
+      - name: Update release preview comment
+        if: always()
+        uses: actions/github-script@v8
+        env:
+          TITLE_VALID: ${{ steps.semantic_pr.outcome == 'success' }}
+          BOOTSTRAP_FLOOR: 2.0.0
+        with:
+          script: |
+            const marker = '<!-- release-preview-comment -->';
+            const pull = context.payload.pull_request;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const bumpPriority = {
+              none: 0,
+              patch: 1,
+              minor: 2,
+              major: 3,
+            };
+
+            const parseSemverTag = (tagName) => {
+              const match = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(tagName);
+              if (!match) {
+                return undefined;
+              }
+
+              return {
+                tagName,
+                major: Number(match[1]),
+                minor: Number(match[2]),
+                patch: Number(match[3]),
+              };
+            };
+
+            const compareVersions = (left, right) => {
+              if (left.major !== right.major) {
+                return left.major - right.major;
+              }
+
+              if (left.minor !== right.minor) {
+                return left.minor - right.minor;
+              }
+
+              return left.patch - right.patch;
+            };
+
+            const bumpVersion = (version, bump) => {
+              if (bump === 'major') {
+                return {
+                  ...version,
+                  major: version.major + 1,
+                  minor: 0,
+                  patch: 0,
+                };
+              }
+
+              if (bump === 'minor') {
+                return {
+                  ...version,
+                  minor: version.minor + 1,
+                  patch: 0,
+                };
+              }
+
+              if (bump === 'patch') {
+                return {
+                  ...version,
+                  patch: version.patch + 1,
+                };
+              }
+
+              return { ...version };
+            };
+
+            const formatVersion = (version) =>
+              `v${version.major}.${version.minor}.${version.patch}`;
+
+            const pickHigherBump = (left, right) =>
+              bumpPriority[left] >= bumpPriority[right] ? left : right;
+
+            const parseConventionalMessage = (message) => {
+              const [header = ''] = message.split('\n');
+              const match = /^(?<type>[a-z]+)(?:\([^)]+\))?(?<breaking>!)?: .+$/.exec(
+                header.trim()
+              );
+              const breaking =
+                /(^|\n)BREAKING CHANGE:/m.test(message) ||
+                /(^|\n)BREAKING-CHANGE:/m.test(message) ||
+                Boolean(match?.groups?.breaking);
+              const type = match?.groups?.type;
+
+              let bump = 'none';
+
+              if (breaking) {
+                bump = 'major';
+              } else if (type === 'feat') {
+                bump = 'minor';
+              } else if (type === 'fix' || type === 'deps') {
+                bump = 'patch';
+              }
+
+              return {
+                header: header.trim(),
+                type,
+                bump,
+                valid: Boolean(match),
+              };
+            };
+
+            const summarizeBumpSources = (infos) => {
+              const counts = {
+                major: 0,
+                minor: 0,
+                patch: 0,
+                none: 0,
+              };
+              const types = new Map();
+
+              for (const info of infos) {
+                counts[info.bump] += 1;
+                if (info.type) {
+                  types.set(info.type, (types.get(info.type) ?? 0) + 1);
+                }
+              }
+
+              const typeSummary = [...types.entries()]
+                .sort((left, right) => left[0].localeCompare(right[0]))
+                .map(([type, count]) => `${type}×${count}`)
+                .join(', ');
+
+              return {
+                counts,
+                typeSummary: typeSummary || 'none',
+              };
+            };
+
+            const resolveBump = (infos) =>
+              infos.reduce(
+                (current, info) => pickHigherBump(current, info.bump),
+                'none'
+              );
+
+            const tags = await github.paginate(github.rest.repos.listTags, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+            const versions = tags
+              .map((tag) => parseSemverTag(tag.name))
+              .filter(Boolean)
+              .sort((left, right) => compareVersions(right, left));
+            const latestVersion =
+              versions[0] ??
+              {
+                tagName: 'v0.0.0',
+                major: 0,
+                minor: 0,
+                patch: 0,
+              };
+
+            const baseCompare =
+              latestVersion.tagName === 'v0.0.0'
+                ? { commits: [] }
+                : await github.rest.repos.compareCommitsWithBasehead({
+                    owner,
+                    repo,
+                    basehead: `${latestVersion.tagName}...${pull.base.sha}`,
+                  });
+
+            const prCommits = await github.paginate(
+              github.rest.pulls.listCommits,
+              {
+                owner,
+                repo,
+                pull_number: pull.number,
+                per_page: 100,
+              }
+            );
+
+            const combinedCommits = [
+              ...(baseCompare.data?.commits ?? []),
+              ...prCommits,
+            ];
+            const uniqueCommits = [
+              ...new Map(
+                combinedCommits.map((commit) => [commit.sha, commit])
+              ).values(),
+            ];
+
+            const prInfos = prCommits.map((commit) =>
+              parseConventionalMessage(commit.commit.message)
+            );
+            const projectedInfos = uniqueCommits.map((commit) =>
+              parseConventionalMessage(commit.commit.message)
+            );
+            const titleInfo = parseConventionalMessage(pull.title);
+            const prBump = resolveBump(prInfos);
+            const projectedBump = resolveBump(projectedInfos);
+
+            const bootstrapFloor = parseSemverTag(
+              `v${process.env.BOOTSTRAP_FLOOR}`
+            );
+            const hasV2Tag = versions.some((version) => version.major >= 2);
+            const needsBootstrapFloor = bootstrapFloor && !hasV2Tag;
+
+            const prOnlyNextVersion = bumpVersion(latestVersion, prBump);
+            let projectedNextVersion = bumpVersion(
+              latestVersion,
+              projectedBump
+            );
+
+            if (
+              needsBootstrapFloor &&
+              compareVersions(projectedNextVersion, bootstrapFloor) < 0
+            ) {
+              projectedNextVersion = bootstrapFloor;
+            }
+
+            const titleState =
+              process.env.TITLE_VALID === 'true' ? 'valid' : 'invalid';
+            const titleBump = titleInfo.bump;
+            const mismatch =
+              titleState === 'valid' && titleBump !== prBump;
+            const prSummary = summarizeBumpSources(prInfos);
+            const projectedSummary = summarizeBumpSources(projectedInfos);
+
+            const lines = [
+              marker,
+              '## Release Preview',
+              '',
+              `- Latest release tag: \`${latestVersion.tagName}\``,
+              `- PR commit bump: \`${prBump}\` (${prSummary.typeSummary})`,
+              `- PR-only next version: \`${formatVersion(prOnlyNextVersion)}\``,
+              `- Projected next release if merged now: \`${formatVersion(projectedNextVersion)}\``,
+              `- Projected bump across unreleased work on \`${pull.base.ref}\` + this PR: \`${projectedBump}\` (${projectedSummary.typeSummary})`,
+              `- PR title check: ${titleState === 'valid' ? '✅ valid' : '❌ invalid'} (\`${pull.title}\`)`,
+            ];
+
+            if (mismatch) {
+              lines.push(
+                `- Title/commit mismatch: ⚠️ title implies \`${titleBump}\`, PR commits imply \`${prBump}\``
+              );
+            } else if (titleState === 'valid') {
+              lines.push(
+                `- Title/commit alignment: ✅ title implies \`${titleBump}\` and matches the PR commits`
+              );
+            } else {
+              lines.push(
+                '- Title/commit alignment: ⚠️ fix the PR title to match Conventional Commits before merge'
+              );
+            }
+
+            if (needsBootstrapFloor) {
+              lines.push(
+                `- Bootstrap note: the release line is being rebased onto \`${formatVersion(bootstrapFloor)}\`, so projected releases are floored at that version until \`v2.0.0\` exists`
+              );
+            }
+
+            lines.push(
+              '',
+              '_Advisory only. Release Please remains the source of truth for the final tag and changelog._'
+            );
+
+            const body = lines.join('\n');
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner,
+                repo,
+                issue_number: pull.number,
+                per_page: 100,
+              }
+            );
+            const existingComment = comments.find(
+              (comment) =>
+                comment.user?.type === 'Bot' &&
+                comment.body?.includes(marker)
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existingComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pull.number,
+                body,
+              });
+            }
+
+      - name: Fail on invalid PR title
+        if: steps.semantic_pr.outcome == 'failure'
+        run: exit 1

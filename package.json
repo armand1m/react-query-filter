@@ -31,6 +31,9 @@
       "require": "./dist/index.cjs"
     }
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "clean": "rimraf dist coverage",
     "dev": "tsup src/index.tsx --format esm,cjs --dts --watch",
@@ -72,10 +75,5 @@
     "typescript-eslint": "^8.29.0",
     "vite": "^6.2.4",
     "vitest": "^3.1.1"
-  },
-  "release": {
-    "branches": [
-      "main"
-    ]
   }
 }

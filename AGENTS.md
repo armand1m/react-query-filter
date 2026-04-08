@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-`src/` contains the published library. The low-level grouped-filter engine lives in `src/core.ts` and `src/hooks/useQueryFilters.ts`, while the recommended consumer API lives in `src/schema.ts` and `src/hooks/useFilterBuilder.ts`. Keep `src/index.tsx` focused on stable public exports. The demo app in `example/src/` should always reflect the recommended integration path, not internal-only APIs. Build output goes to `dist/` and is generated.
+`src/` contains the published library. The low-level grouped-filter engine lives in `src/core.ts` and `src/hooks/useQueryFilters.ts`, while the recommended consumer API lives in `src/types.ts` and `src/hooks/useFilterBuilder.ts`. Keep `src/index.tsx` focused on stable public exports. The demo app in `example/src/` should always reflect the recommended integration path, not internal-only APIs. Build output goes to `dist/` and is generated. Release automation config lives in `release-please-config.json`, `.release-please-manifest.json`, and `.github/workflows/`.
 
 ## Build, Test, and Development Commands
 
@@ -38,4 +38,8 @@ Tests use Vitest and `@testing-library/react`. Add tests next to implementation 
 
 ## Commit & Pull Request Guidelines
 
-Follow Conventional Commits such as `feat:`, `fix:`, and `test:`. Keep commits scoped to a coherent behavior change. Pull requests should explain user-facing DX impact, especially when changing the public API, example integration path, or type surface. Call out breaking changes and migration implications explicitly.
+Follow Conventional Commits such as `feat:`, `fix:`, `deps:`, and `test:`. Keep commits scoped to a coherent behavior change. PR titles must also use Conventional Commits because release automation checks them and maintainers rely on the release preview comment for expected bump information. Pull requests should explain user-facing DX impact, especially when changing the public API, example integration path, or type surface. Call out breaking changes and migration implications explicitly.
+
+## Release Automation
+
+Release Please owns normal version bumps, changelog updates, GitHub Releases, and npm publishing. Do not hand-edit `CHANGELOG.md` or version fields for routine releases. If release behavior needs to change, update the release workflow and Release Please config together so the release PR, GitHub Release, npm publish step, and PR preview comment stay consistent.

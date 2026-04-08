@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "include-v-in-tag": true,
+  "pull-request-title-pattern": "chore: release v${version}",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "react-query-filter",
+      "include-component-in-tag": false,
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}

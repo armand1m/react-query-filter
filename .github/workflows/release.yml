@@ -1,0 +1,100 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Detect release bootstrap
+        id: bootstrap
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const tags = await github.paginate(
+              github.rest.repos.listTags,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+              }
+            );
+            const needsBootstrap = !tags.some(
+              (tag) => tag.name === 'v2.0.0'
+            );
+
+            core.setOutput(
+              'needs_bootstrap',
+              needsBootstrap ? 'true' : 'false'
+            );
+
+      - name: Run Release Please (bootstrap v2 line)
+        id: release_bootstrap
+        if: steps.bootstrap.outputs.needs_bootstrap == 'true'
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          release-as: 2.0.0
+
+      - name: Run Release Please
+        id: release
+        if: steps.bootstrap.outputs.needs_bootstrap != 'true'
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Resolve release outputs
+        id: release_outputs
+        if: always()
+        run: |
+          echo "release_created=${{ steps.release_bootstrap.outputs.release_created || steps.release.outputs.release_created || 'false' }}" >> "$GITHUB_OUTPUT"
+          echo "tag_name=${{ steps.release_bootstrap.outputs.tag_name || steps.release.outputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          echo "version=${{ steps.release_bootstrap.outputs.version || steps.release.outputs.version }}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        if: steps.release_outputs.outputs.release_created == 'true'
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        if: steps.release_outputs.outputs.release_created == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        if: steps.release_outputs.outputs.release_created == 'true'
+        run: npm ci
+
+      - name: Install example dependencies
+        if: steps.release_outputs.outputs.release_created == 'true'
+        run: npm --prefix example ci
+
+      - name: Validate package
+        if: steps.release_outputs.outputs.release_created == 'true'
+        run: npm run validate
+
+      - name: Build example
+        if: steps.release_outputs.outputs.release_created == 'true'
+        run: npm run example:build
+
+      - name: Publish to npm
+        if: steps.release_outputs.outputs.release_created == 'true'
+        run: npm publish --provenance --access public
