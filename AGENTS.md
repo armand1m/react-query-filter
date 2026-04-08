@@ -42,4 +42,4 @@ Follow Conventional Commits such as `feat:`, `fix:`, `deps:`, and `test:`. Keep 
 
 ## Release Automation
 
-Release Please owns normal version bumps, changelog updates, GitHub Releases, and npm publishing. Do not hand-edit `CHANGELOG.md` or version fields for routine releases. If release behavior needs to change, update the release workflow and Release Please config together so the release PR, GitHub Release, npm publish step, and PR preview comment stay consistent.
+Release Please owns normal version bumps and changelog PRs. The merged release commit must validate successfully before npm publication and GitHub release creation happen, so npm and changelog state stay aligned. Do not hand-edit `CHANGELOG.md` or version fields for routine releases. If release behavior needs to change, update the release workflow and Release Please config together so the release PR, npm publish step, GitHub release creation, and PR preview comment stay consistent. Use a dedicated `RELEASE_PLEASE_TOKEN` secret if release PRs need to trigger the normal PR validation workflow.

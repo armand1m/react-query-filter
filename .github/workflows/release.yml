@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Optional version to publish from the current main branch state
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -16,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  release_pr:
     runs-on: ubuntu-latest
 
     steps:
@@ -43,36 +49,63 @@ jobs:
             );
 
       - name: Run Release Please (bootstrap v2 line)
-        id: release_bootstrap
         if: steps.bootstrap.outputs.needs_bootstrap == 'true'
         uses: googleapis/release-please-action@v4
         with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          skip-github-release: true
           release-as: 2.0.0
 
       - name: Run Release Please
-        id: release
         if: steps.bootstrap.outputs.needs_bootstrap != 'true'
         uses: googleapis/release-please-action@v4
         with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          skip-github-release: true
 
-      - name: Resolve release outputs
-        id: release_outputs
-        if: always()
-        run: |
-          echo "release_created=${{ steps.release_bootstrap.outputs.release_created || steps.release.outputs.release_created || 'false' }}" >> "$GITHUB_OUTPUT"
-          echo "tag_name=${{ steps.release_bootstrap.outputs.tag_name || steps.release.outputs.tag_name }}" >> "$GITHUB_OUTPUT"
-          echo "version=${{ steps.release_bootstrap.outputs.version || steps.release.outputs.version }}" >> "$GITHUB_OUTPUT"
+  publish:
+    runs-on: ubuntu-latest
+    needs: release_pr
 
+    steps:
       - name: Checkout
-        if: steps.release_outputs.outputs.release_created == 'true'
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect merged release commit
+        id: release_meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version_input="${{ github.event.inputs.version || '' }}"
+          changed_files="$(git diff --name-only "${{ github.event.before || github.sha }}" "${{ github.sha }}")"
+          version="$(node -p "require('./package.json').version")"
+
+          if [ -n "$version_input" ]; then
+            version="$version_input"
+          fi
+
+          is_release_merge=false
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "$version" != "0.0.0-development" ]; then
+              is_release_merge=true
+            fi
+          elif grep -qx 'package.json' <<<"$changed_files" && grep -qx 'CHANGELOG.md' <<<"$changed_files" && [ "$version" != "0.0.0-development" ]; then
+            is_release_merge=true
+          fi
+
+          echo "is_release_merge=$is_release_merge" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag_name=v$version" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node
-        if: steps.release_outputs.outputs.release_created == 'true'
+        if: steps.release_meta.outputs.is_release_merge == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -80,21 +113,91 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
-        if: steps.release_outputs.outputs.release_created == 'true'
+        if: steps.release_meta.outputs.is_release_merge == 'true'
         run: npm ci
 
       - name: Install example dependencies
-        if: steps.release_outputs.outputs.release_created == 'true'
+        if: steps.release_meta.outputs.is_release_merge == 'true'
         run: npm --prefix example ci
 
       - name: Validate package
-        if: steps.release_outputs.outputs.release_created == 'true'
+        if: steps.release_meta.outputs.is_release_merge == 'true'
         run: npm run validate
 
       - name: Build example
-        if: steps.release_outputs.outputs.release_created == 'true'
+        if: steps.release_meta.outputs.is_release_merge == 'true'
         run: npm run example:build
 
-      - name: Publish to npm
-        if: steps.release_outputs.outputs.release_created == 'true'
+      - name: Check npm for published version
+        id: npm_state
+        if: steps.release_meta.outputs.is_release_merge == 'true'
+        shell: bash
+        run: |
+          set +e
+          npm view "react-query-filter@${{ steps.release_meta.outputs.version }}" version >/dev/null 2>&1
+          status=$?
+          set -e
+
+          if [ "$status" -eq 0 ]; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to npm with token
+        if: steps.release_meta.outputs.is_release_merge == 'true' && steps.npm_state.outputs.published != 'true' && secrets.NPM_TOKEN != ''
         run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm with trusted publishing
+        if: steps.release_meta.outputs.is_release_merge == 'true' && steps.npm_state.outputs.published != 'true' && secrets.NPM_TOKEN == ''
+        run: npm publish --provenance --access public
+
+      - name: Create GitHub release
+        if: steps.release_meta.outputs.is_release_merge == 'true'
+        uses: actions/github-script@v8
+        env:
+          TAG_NAME: ${{ steps.release_meta.outputs.tag_name }}
+          VERSION: ${{ steps.release_meta.outputs.version }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const tagName = process.env.TAG_NAME;
+            const version = process.env.VERSION;
+            const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+            const escapedVersion = version.replace(/\./g, '\\.');
+            const sectionPattern = new RegExp(
+              `^##\\s+\\[?${escapedVersion}\\]?[^\\n]*\\n([\\s\\S]*?)(?=^##\\s+|\\Z)`,
+              'm'
+            );
+            const sectionMatch = changelog.match(sectionPattern);
+            const body = sectionMatch
+              ? sectionMatch[0].trim()
+              : `## ${version}`;
+
+            try {
+              await github.rest.repos.getReleaseByTag({
+                owner,
+                repo,
+                tag: tagName,
+              });
+              core.info(`GitHub release ${tagName} already exists`);
+              return;
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+            }
+
+            await github.rest.repos.createRelease({
+              owner,
+              repo,
+              tag_name: tagName,
+              name: tagName,
+              target_commitish: context.sha,
+              body,
+              generate_release_notes: false,
+            });

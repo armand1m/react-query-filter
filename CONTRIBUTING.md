@@ -39,4 +39,5 @@ npm run validate
 - Releases are managed by Release Please on `main`.
 - Do not manually edit `CHANGELOG.md` or bump versions for standard releases.
 - The first automated modern release will bootstrap from the historical `1.x` line to `v2.0.0`.
-- npm publishing is expected to use trusted publishing from GitHub Actions, so repository admins should configure npm trusted publishing for this repository before merging the release PR.
+- Release PRs should pass CI before merge. To make that happen reliably, configure a `RELEASE_PLEASE_TOKEN` repository secret so Release Please PRs are created with a token that can trigger normal pull request workflows.
+- npm publishing supports either the existing `NPM_TOKEN` secret or npm trusted publishing from GitHub Actions. The workflow prefers `NPM_TOKEN` when present and otherwise falls back to trusted publishing.

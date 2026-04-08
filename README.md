@@ -190,6 +190,7 @@ Releases are automated with Release Please on `main`. Maintainers do not hand-ed
 
 - Merge Conventional Commit PRs into `main`.
 - Release Please opens or updates a release PR with the changelog and next version.
-- Merging the release PR creates the GitHub Release and publishes to npm with trusted publishing and provenance.
+- Release PRs should pass normal CI before merge. To make that reliable, configure a `RELEASE_PLEASE_TOKEN` repository secret so Release Please PRs can trigger the standard pull request workflows.
+- Merging the release PR validates the merged commit, publishes to npm, and only then creates the GitHub Release so npm and changelog state stay aligned.
 
 Pull requests also get a release preview comment that shows the likely bump from the PR commits and the projected next release if merged now. Keep the PR title in Conventional Commit format so the preview and release history stay readable.
