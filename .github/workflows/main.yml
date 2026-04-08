@@ -26,5 +26,8 @@ jobs:
       - name: Validate library
         run: npm run validate
 
+      - name: Install example dependencies
+        run: npm --prefix example install
+
       - name: Build example
         run: npm run example:build

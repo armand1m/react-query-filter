@@ -104,7 +104,9 @@ const ConditionRow = ({
       )}
 
       <select className="select" {...fieldProps}>
-        <option value="">Field</option>
+        <option disabled={true} hidden={true} value="">
+          Field
+        </option>
         {fieldProps.options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -113,7 +115,9 @@ const ConditionRow = ({
       </select>
 
       <select className="select" {...operatorProps}>
-        <option value="">Operator</option>
+        <option disabled={true} hidden={true} value="">
+          Operator
+        </option>
         {operatorProps.options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
