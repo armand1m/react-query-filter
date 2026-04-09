@@ -343,12 +343,15 @@ const defaultIsEmpty = (value: FilterValue | undefined) =>
   value === undefined ||
   (Array.isArray(value) ? value.length === 0 : value === '');
 
-const coerceTextValue = (value: unknown) => {
+const coerceTextValue = (value: unknown): string | undefined => {
   if (value === undefined || value === null || value === '') {
     return undefined;
   }
 
-  return String(value);
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return Number.isNaN(value) ? undefined : String(value);
+  if (typeof value === 'boolean') return String(value);
+  return undefined;
 };
 
 const coerceNumberValue = (value: unknown) => {
@@ -400,11 +403,20 @@ const coerceStringArrayValue = (value: unknown) => {
 
   if (Array.isArray(value)) {
     return value
-      .map((entry) => String(entry))
-      .filter((entry) => entry.length > 0);
+      .map((entry: unknown) =>
+        typeof entry === 'string' ||
+        typeof entry === 'number' ||
+        typeof entry === 'boolean'
+          ? String(entry)
+          : null
+      )
+      .filter((entry): entry is string => entry !== null && entry.length > 0);
   }
 
-  return [String(value)];
+  if (typeof value === 'string') return value ? [value] : undefined;
+  if (typeof value === 'number' || typeof value === 'boolean')
+    return [String(value)];
+  return undefined;
 };
 
 export const defineFieldType = <
@@ -533,7 +545,7 @@ type InferFieldValue<TDefinition> =
     : never;
 
 type CustomFieldConfig<
-  TDefinition extends FieldTypeDefinition<string, any>,
+  TDefinition extends FieldTypeDefinition<string, FilterValue>,
 > = Omit<
   SchemaFieldBase<InferFieldValue<TDefinition>, TDefinition['type']>,
   'type' | 'valueKind' | 'coerce' | 'isEmpty'
@@ -618,7 +630,7 @@ export interface FieldFactory {
       'type' | 'valueKind' | 'coerce' | 'isEmpty'
     >
   ) => IdSchemaField;
-  custom: <TDefinition extends FieldTypeDefinition<string, any>>(
+  custom: <TDefinition extends FieldTypeDefinition<string, FilterValue>>(
     definition: TDefinition,
     field: CustomFieldConfig<TDefinition>
   ) => SchemaFieldBase<
@@ -628,7 +640,7 @@ export interface FieldFactory {
 }
 
 const createField = <
-  TDefinition extends FieldTypeDefinition<string, any>,
+  TDefinition extends FieldTypeDefinition<string, FilterValue>,
 >(
   definition: TDefinition,
   field: CustomFieldConfig<TDefinition>
@@ -637,6 +649,10 @@ const createField = <
     ...field,
     type: definition.type,
     valueKind: definition.valueKind,
+    operators: field.operators ??
+      (definition.defaultOperators.length > 0
+        ? definition.defaultOperators
+        : undefined),
     coerce: definition.coerce,
     isEmpty: definition.isEmpty,
   }) as SchemaFieldBase<

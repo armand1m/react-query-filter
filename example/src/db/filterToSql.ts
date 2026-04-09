@@ -229,6 +229,7 @@ export function buildFilterQuery(
   const qb = db('volcanoes').select('*');
   applyGroup(qb, group);
   const { sql, bindings } = qb.toSQL();
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string
   const displaySql = qb.toString();
   return { sql, bindings, displaySql };
 }

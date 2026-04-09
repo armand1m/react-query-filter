@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { defaultTypeOperationsMap } from '../operations';
+import { defaultTypeOperationsMap, OperationType } from '../operations';
 import { useQueryFilters } from './useQueryFilters';
 import {
   createTextLikeController,
@@ -46,7 +46,7 @@ const schemaFieldToDefinition = <
 const getDefaultOperators = (schemaField?: SchemaField) =>
   schemaField
     ? (schemaField.operators ??
-      defaultTypeOperationsMap[schemaField.type as string] ??
+      defaultTypeOperationsMap[schemaField.type] ??
       defaultTypeOperationsMap.string)
     : defaultTypeOperationsMap.string;
 
@@ -222,7 +222,36 @@ export const useFilterBuilder = <TSchema extends FilterSchema>({
             stringSuggestions,
             condition.id
           );
-        case 'select':
+        case 'select': {
+          const isInOperator =
+            condition.operator === OperationType.IN ||
+            condition.operator === OperationType.NOT_IN;
+
+          if (isInOperator) {
+            return {
+              kind: 'multiselect' as const,
+              props: {
+                multiple: true,
+                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => {
+                  raw.updateConditionValue(
+                    condition.id,
+                    Array.from(
+                      event.currentTarget.selectedOptions,
+                      (option) => option.value
+                    )
+                  );
+                },
+                value: Array.isArray(condition.value)
+                  ? [...(condition.value as readonly string[])]
+                  : typeof condition.value === 'string'
+                    ? [condition.value]
+                    : [],
+              },
+              options: optionList,
+              suggestions: stringSuggestions,
+            } satisfies ValueInputController;
+          }
+
           return {
             kind: 'select',
             props: {
@@ -240,6 +269,7 @@ export const useFilterBuilder = <TSchema extends FilterSchema>({
             options: optionList,
             suggestions: stringSuggestions,
           } satisfies ValueInputController;
+        }
         case 'multiselect':
           return {
             kind: 'multiselect',
@@ -255,7 +285,7 @@ export const useFilterBuilder = <TSchema extends FilterSchema>({
                 );
               },
               value: Array.isArray(condition.value)
-                ? [...condition.value]
+                ? [...(condition.value as readonly string[])]
                 : [],
             },
             options: optionList,

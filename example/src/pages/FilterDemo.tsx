@@ -187,9 +187,9 @@ const HighlightedCode = ({ code }: { code: string }) => {
     useState<React.ReactNode>(null);
 
   useEffect(() => {
-    starryNightPromise.then((starryNight) => {
+    void starryNightPromise.then((starryNight) => {
       const tree = starryNight.highlight(code, 'source.tsx');
-      setHighlighted(toJsxRuntime(tree, { Fragment, jsx, jsxs }));
+      setHighlighted(toJsxRuntime(tree, { Fragment, jsx, jsxs }) as React.ReactNode);
     });
   }, [code]);
 

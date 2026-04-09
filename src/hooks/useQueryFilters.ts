@@ -155,7 +155,7 @@ export const useQueryFilters = ({
       const condition = getCondition(conditionId);
       const fieldType = condition?.type ?? 'string';
       const operations =
-        typeOperationsMap[fieldType as string] ??
+        typeOperationsMap[fieldType] ??
         typeOperationsMap.string ??
         [];
 

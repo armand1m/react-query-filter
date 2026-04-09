@@ -239,14 +239,18 @@ export const volcanoData: Volcano[] = [
   },
 ];
 
+interface AlaSQLInstance {
+  tables: Record<string, { data: unknown[] }>;
+}
+
 // Module-level init — runs once on first import, safe under Vite HMR
 alasql('DROP TABLE IF EXISTS volcanoes');
 alasql('CREATE TABLE volcanoes');
-(alasql as any).tables['volcanoes'].data = volcanoData;
+(alasql as unknown as AlaSQLInstance).tables['volcanoes'].data = volcanoData;
 
 export function queryVolcanoes(query: FilterQueryResult): Volcano[] {
   try {
-    return alasql(query.sql, [...query.bindings]) as Volcano[];
+    return alasql(query.sql, [...query.bindings]);
   } catch (e) {
     console.error('alasql error:', e);
     return [];
