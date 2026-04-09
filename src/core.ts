@@ -52,41 +52,13 @@ export const resolveFieldDefinition = (
 
 export const coerceFilterValue = (
   value: FilterValue | undefined,
-  type?: FieldType
+  field?: FieldDefinition
 ): FilterValue | undefined => {
-  if (value === undefined || type === undefined) {
+  if (value === undefined || !field) {
     return value;
   }
 
-  switch (type) {
-    case 'boolean':
-      if (typeof value === 'boolean') {
-        return value;
-      }
-
-      if (typeof value === 'string') {
-        const normalizedValue = value.trim().toLowerCase();
-
-        if (normalizedValue === 'true') {
-          return true;
-        }
-
-        if (normalizedValue === 'false') {
-          return false;
-        }
-      }
-
-      if (typeof value === 'number') {
-        return value !== 0;
-      }
-
-      return undefined;
-    case 'number':
-      return typeof value === 'number' ? value : Number(value);
-    case 'string':
-    default:
-      return String(value);
-  }
+  return field.coerce ? field.coerce(value) : value;
 };
 
 export const isFilterGroup = (
@@ -99,9 +71,10 @@ export const normalizeCondition = (
   fields: FieldDefinition[],
   noValueOperations: OperationType[]
 ): FilterCondition => {
-  const type = condition.field
-    ? resolveFieldType(fields, condition.field)
-    : condition.type;
+  const fieldDefinition = condition.field
+    ? resolveFieldDefinition(fields, condition.field)
+    : undefined;
+  const type = fieldDefinition?.type ?? condition.type;
   const operator = condition.operator;
 
   return {
@@ -116,7 +89,7 @@ export const normalizeCondition = (
     value:
       operator && noValueOperations.includes(operator)
         ? undefined
-        : coerceFilterValue(condition.value, type),
+        : coerceFilterValue(condition.value, fieldDefinition),
   };
 };
 
