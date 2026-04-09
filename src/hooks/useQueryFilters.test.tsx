@@ -230,6 +230,14 @@ describe('useQueryFilters', () => {
         label: 'is',
         value: OperationType.IS,
       },
+      {
+        label: 'is not',
+        value: OperationType.IS_NOT,
+      },
+      {
+        label: 'is any',
+        value: OperationType.IS_ANY,
+      },
     ]);
   });
 

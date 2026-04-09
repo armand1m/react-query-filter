@@ -23,6 +23,7 @@ export enum OperationType {
   ON_OR_BEFORE = 'ON_OR_BEFORE',
   ON_OR_AFTER = 'ON_OR_AFTER',
   BETWEEN = 'BETWEEN',
+  IS_ANY = 'IS_ANY',
 }
 
 export const defaultOperationLabels: Record<OperationType, string> = {
@@ -50,11 +51,13 @@ export const defaultOperationLabels: Record<OperationType, string> = {
   ON_OR_AFTER: 'on or after',
   ON_OR_BEFORE: 'on or before',
   STARTS_WITH: 'starts with',
+  IS_ANY: 'is any',
 };
 
 export const defaultNoValueOperations = [
   OperationType.IS_EMPTY,
   OperationType.IS_NOT_EMPTY,
+  OperationType.IS_ANY,
 ];
 
 export const defaultTypeOperationsMap: Record<
@@ -81,7 +84,11 @@ export const defaultTypeOperationsMap: Record<
     OperationType.IS_EMPTY,
     OperationType.IS_NOT_EMPTY,
   ],
-  boolean: [OperationType.IS],
+  boolean: [
+    OperationType.IS,
+    OperationType.IS_NOT,
+    OperationType.IS_ANY,
+  ],
   date: [
     OperationType.IS,
     OperationType.BEFORE,
