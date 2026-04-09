@@ -3,30 +3,79 @@ import { describe, expect, it, vi } from 'vitest';
 import { Binding } from '../bindings';
 import { OperationType } from '../operations';
 import {
+  defineFieldType,
   FieldDefinition,
   FilterCondition,
   FilterGroup,
+  field,
 } from '../types';
 import { useQueryFilters } from './useQueryFilters';
+
+const coordinateType = defineFieldType({
+  type: 'coordinate',
+  valueKind: 'text',
+  defaultOperators: [OperationType.IS],
+  coerce: (value) =>
+    typeof value === 'string' && value.length > 0 ? value : undefined,
+});
 
 const fields: FieldDefinition[] = [
   {
     key: 'name',
-    label: 'Name',
-    type: 'string',
-    suggestions: ['Ada', 'Linus'],
+    ...field.string({
+      label: 'Name',
+      suggestions: ['Ada', 'Linus'],
+    }),
   },
   {
     key: 'age',
-    label: 'Age',
-    type: 'number',
-    suggestions: [18, 42],
+    ...field.number({
+      label: 'Age',
+      suggestions: [18, 42],
+    }),
   },
   {
     key: 'isAdmin',
-    label: 'Is Admin',
-    type: 'boolean',
-    suggestions: [true, false],
+    ...field.boolean({
+      label: 'Is Admin',
+      suggestions: [true, false],
+    }),
+  },
+  {
+    key: 'publishedAt',
+    ...field.date({
+      label: 'Published At',
+      suggestions: ['2026-04-01'],
+    }),
+  },
+  {
+    key: 'status',
+    ...field.select({
+      label: 'Status',
+      options: [
+        { label: 'Draft', value: 'draft' },
+        { label: 'Active', value: 'active' },
+      ],
+      suggestions: ['draft', 'active'],
+    }),
+  },
+  {
+    key: 'tags',
+    ...field.multiSelect({
+      label: 'Tags',
+      options: [
+        { label: 'Featured', value: 'featured' },
+        { label: 'Launch', value: 'launch' },
+      ],
+      suggestions: ['featured', 'launch'],
+    }),
+  },
+  {
+    key: 'location',
+    ...field.custom(coordinateType, {
+      label: 'Location',
+      suggestions: ['35.6762,139.6503'],
+    }),
   },
 ];
 
@@ -232,6 +281,104 @@ describe('useQueryFilters', () => {
 
     expect(getFirstCondition(result.current.rootGroup).value).toBe(
       false
+    );
+  });
+
+  it('keeps semantic date values as strings', () => {
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        defaultValue: {
+          kind: 'group',
+          children: [{ kind: 'condition', field: 'publishedAt' }],
+        },
+      })
+    );
+
+    const conditionId = getFirstCondition(
+      result.current.rootGroup
+    ).id;
+
+    act(() => {
+      result.current.updateConditionOperator(
+        conditionId,
+        OperationType.BEFORE
+      );
+      result.current.updateConditionValue(conditionId, '2026-04-15');
+    });
+
+    expect(getFirstCondition(result.current.rootGroup)).toMatchObject(
+      {
+        field: 'publishedAt',
+        type: 'date',
+        value: '2026-04-15',
+      }
+    );
+  });
+
+  it('coerces multiselect values to string arrays', () => {
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        defaultValue: {
+          kind: 'group',
+          children: [{ kind: 'condition', field: 'tags' }],
+        },
+      })
+    );
+
+    const conditionId = getFirstCondition(
+      result.current.rootGroup
+    ).id;
+
+    act(() => {
+      result.current.updateConditionOperator(
+        conditionId,
+        OperationType.ANY_OF
+      );
+      result.current.updateConditionValue(conditionId, [
+        'featured',
+        'launch',
+      ]);
+    });
+
+    expect(
+      getFirstCondition(result.current.rootGroup).value
+    ).toStrictEqual(['featured', 'launch']);
+  });
+
+  it('uses custom field coercion for semantic custom types', () => {
+    const { result } = renderHook(() =>
+      useQueryFilters({
+        fields,
+        defaultValue: {
+          kind: 'group',
+          children: [{ kind: 'condition', field: 'location' }],
+        },
+      })
+    );
+
+    const conditionId = getFirstCondition(
+      result.current.rootGroup
+    ).id;
+
+    act(() => {
+      result.current.updateConditionOperator(
+        conditionId,
+        OperationType.IS
+      );
+      result.current.updateConditionValue(
+        conditionId,
+        '35.6762,139.6503'
+      );
+    });
+
+    expect(getFirstCondition(result.current.rootGroup)).toMatchObject(
+      {
+        field: 'location',
+        type: 'coordinate',
+        value: '35.6762,139.6503',
+      }
     );
   });
 

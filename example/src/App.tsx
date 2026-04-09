@@ -8,13 +8,32 @@ import {
 } from '../../src';
 
 const schema = defineFilterSchema({
-  status: field.string({
+  status: field.select({
     label: 'Status',
+    options: [
+      { label: 'Draft', value: 'draft' },
+      { label: 'Active', value: 'active' },
+      { label: 'Archived', value: 'archived' },
+    ],
     suggestions: ['draft', 'active', 'archived'],
   }),
-  score: field.number({
-    label: 'Score',
-    suggestions: [10, 25, 50],
+  amount: field.currency({
+    label: 'Amount',
+    suggestions: [100, 250, 500],
+    meta: { currency: 'USD' },
+  }),
+  publishedAt: field.date({
+    label: 'Published Date',
+    suggestions: ['2026-04-01', '2026-04-15'],
+  }),
+  tags: field.multiSelect({
+    label: 'Tags',
+    options: [
+      { label: 'Featured', value: 'featured' },
+      { label: 'Internal', value: 'internal' },
+      { label: 'Launch', value: 'launch' },
+    ],
+    suggestions: ['featured', 'launch'],
   }),
   published: field.boolean({
     label: 'Published',
@@ -31,9 +50,19 @@ const IMPLEMENTATION_SNIPPET = `import {
 } from 'react-query-filter';
 
 const schema = defineFilterSchema({
-  status: field.string({ label: 'Status' }),
-  score: field.number({ label: 'Score' }),
-  published: field.boolean({ label: 'Published' }),
+  status: field.select({
+    label: 'Status',
+    options: [
+      { label: 'Draft', value: 'draft' },
+      { label: 'Active', value: 'active' },
+    ],
+  }),
+  amount: field.currency({ label: 'Amount' }),
+  publishedAt: field.date({ label: 'Published Date' }),
+  tags: field.multiSelect({
+    label: 'Tags',
+    options: [{ label: 'Featured', value: 'featured' }],
+  }),
 });
 
 function ConditionRow({
@@ -84,8 +113,29 @@ function ConditionRow({
         <input type="number" {...condition.valueInput.props} />
       ) : null}
 
-      {condition.valueInput.kind === 'boolean' ? (
-        <input type="checkbox" {...condition.valueInput.props} />
+      {condition.valueInput.kind === 'date' ? (
+        <input type="date" {...condition.valueInput.props} />
+      ) : null}
+
+      {condition.valueInput.kind === 'select' ? (
+        <select {...condition.valueInput.props}>
+          <option value="">Select value</option>
+          {condition.valueInput.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : null}
+
+      {condition.valueInput.kind === 'multiselect' ? (
+        <select {...condition.valueInput.props}>
+          {condition.valueInput.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       ) : null}
     </div>
   );
@@ -255,12 +305,59 @@ const renderValueInput = (
           ) : null}
         </>
       );
-    case 'text':
+    case 'date':
       return (
         <>
           <input
             className="input"
-            type="text"
+            type="date"
+            {...condition.valueInput.props}
+          />
+          {condition.valueInput.suggestions.length > 0 ? (
+            <datalist id={`suggestions-${condition.id}`}>
+              {condition.valueInput.suggestions.map((suggestion) => (
+                <option
+                  key={`${condition.id}-${suggestion}`}
+                  value={suggestion}
+                />
+              ))}
+            </datalist>
+          ) : null}
+        </>
+      );
+    case 'select':
+      return (
+        <select className="select" {...condition.valueInput.props}>
+          <option value="">Select value</option>
+          {condition.valueInput.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      );
+    case 'multiselect':
+      return (
+        <select
+          className="select"
+          size={Math.max(3, condition.valueInput.options.length)}
+          {...condition.valueInput.props}
+        >
+          {condition.valueInput.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      );
+    case 'text':
+    case 'datetime-local':
+    case 'time':
+      return (
+        <>
+          <input
+            className="input"
+            type={condition.valueInput.kind}
             {...condition.valueInput.props}
           />
           {condition.valueInput.suggestions.length > 0 ? (
