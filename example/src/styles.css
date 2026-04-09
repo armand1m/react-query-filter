@@ -1,3 +1,5 @@
+@import '@wooorm/starry-night/style/dark';
+
 :root {
   color: #dbe5f0;
   background:
@@ -182,34 +184,6 @@ select {
   font-family: 'IBM Plex Mono', 'SFMono-Regular', monospace;
   font-size: 0.88rem;
   line-height: 1.65;
-}
-
-.code-line {
-  display: block;
-}
-
-.token-comment {
-  color: #7c8aa5;
-}
-
-.token-string {
-  color: #a5f3fc;
-}
-
-.token-keyword {
-  color: #f9a8d4;
-}
-
-.token-type {
-  color: #93c5fd;
-}
-
-.token-jsx {
-  color: #fca5a5;
-}
-
-.token-punctuation {
-  color: #c4b5fd;
 }
 
 @media (max-width: 900px) {

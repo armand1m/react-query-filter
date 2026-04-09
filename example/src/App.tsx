@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createStarryNight, common, all } from '@wooorm/starry-night';
+import { toJsxRuntime } from 'hast-util-to-jsx-runtime';
+import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
 import {
   ConditionController,
   GroupController,
@@ -6,6 +9,9 @@ import {
   field,
   useFilterBuilder,
 } from '../../src';
+
+const tsxGrammar = all.find((g) => g.scopeName === 'source.tsx')!;
+const starryNightPromise = createStarryNight([...common, tsxGrammar]);
 
 const schema = defineFilterSchema({
   status: field.select({
@@ -176,103 +182,18 @@ export function Filters() {
   return <GroupedFilters group={builder.root} />;
 }`;
 
-const CODE_KEYWORDS = new Set([
-  'const',
-  'return',
-  'function',
-  'import',
-  'from',
-  'type',
-  'export',
-  'if',
-  'else',
-  'null',
-  'true',
-  'false',
-]);
+const HighlightedCode = ({ code }: { code: string }) => {
+  const [highlighted, setHighlighted] = useState<React.ReactNode>(null);
 
-const tokenizeCodeLine = (line: string) => {
-  const pattern =
-    /(\/\/.*$|'(?:\\.|[^'])*'|"(?:\\.|[^"])*"|`(?:\\.|[^`])*`|\b(?:const|return|function|import|from|type|export|if|else|null|true|false)\b|\b[A-Z][A-Za-z0-9_]*\b|<\/?[A-Za-z][^>\s]*|[{}()[\].,:]|=>)/g;
-  const tokens: Array<{
-    type:
-      | 'plain'
-      | 'comment'
-      | 'string'
-      | 'keyword'
-      | 'type'
-      | 'jsx'
-      | 'punctuation';
-    value: string;
-  }> = [];
-  let lastIndex = 0;
-
-  for (const match of line.matchAll(pattern)) {
-    const value = match[0];
-    const index = match.index ?? 0;
-
-    if (index > lastIndex) {
-      tokens.push({
-        type: 'plain',
-        value: line.slice(lastIndex, index),
-      });
-    }
-
-    let type: (typeof tokens)[number]['type'] = 'plain';
-
-    if (value.startsWith('//')) {
-      type = 'comment';
-    } else if (
-      value.startsWith("'") ||
-      value.startsWith('"') ||
-      value.startsWith('`')
-    ) {
-      type = 'string';
-    } else if (CODE_KEYWORDS.has(value)) {
-      type = 'keyword';
-    } else if (
-      value.startsWith('<') ||
-      value === '</' ||
-      value === '/>'
-    ) {
-      type = 'jsx';
-    } else if (/^[A-Z]/.test(value)) {
-      type = 'type';
-    } else if (/^[{}()[\].,:]|=>$/.test(value)) {
-      type = 'punctuation';
-    }
-
-    tokens.push({ type, value });
-    lastIndex = index + value.length;
-  }
-
-  if (lastIndex < line.length) {
-    tokens.push({
-      type: 'plain',
-      value: line.slice(lastIndex),
+  useEffect(() => {
+    starryNightPromise.then((starryNight) => {
+      const tree = starryNight.highlight(code, 'source.tsx');
+      setHighlighted(toJsxRuntime(tree, { Fragment, jsx, jsxs }));
     });
-  }
+  }, [code]);
 
-  return tokens;
+  return <code>{highlighted ?? code}</code>;
 };
-
-const HighlightedCode = ({ code }: { code: string }) => (
-  <code>
-    {code.split('\n').map((line, lineIndex) => (
-      <span className="code-line" key={`line-${lineIndex}`}>
-        {tokenizeCodeLine(line).map((token, tokenIndex) => (
-          <span
-            className={`token token-${token.type}`}
-            key={`token-${lineIndex}-${tokenIndex}`}
-          >
-            {token.value}
-          </span>
-        ))}
-        {lineIndex < code.split('\n').length - 1 ? '\n' : null}
-      </span>
-    ))}
-  </code>
-);
 
 const renderValueInput = (
   condition: ConditionController<typeof schema>
