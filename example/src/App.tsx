@@ -183,7 +183,8 @@ export function Filters() {
 }`;
 
 const HighlightedCode = ({ code }: { code: string }) => {
-  const [highlighted, setHighlighted] = useState<React.ReactNode>(null);
+  const [highlighted, setHighlighted] =
+    useState<React.ReactNode>(null);
 
   useEffect(() => {
     starryNightPromise.then((starryNight) => {
