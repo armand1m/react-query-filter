@@ -349,7 +349,8 @@ const coerceTextValue = (value: unknown): string | undefined => {
   }
 
   if (typeof value === 'string') return value;
-  if (typeof value === 'number') return Number.isNaN(value) ? undefined : String(value);
+  if (typeof value === 'number')
+    return Number.isNaN(value) ? undefined : String(value);
   if (typeof value === 'boolean') return String(value);
   return undefined;
 };
@@ -410,7 +411,9 @@ const coerceStringArrayValue = (value: unknown) => {
           ? String(entry)
           : null
       )
-      .filter((entry): entry is string => entry !== null && entry.length > 0);
+      .filter(
+        (entry): entry is string => entry !== null && entry.length > 0
+      );
   }
 
   if (typeof value === 'string') return value ? [value] : undefined;
@@ -630,7 +633,9 @@ export interface FieldFactory {
       'type' | 'valueKind' | 'coerce' | 'isEmpty'
     >
   ) => IdSchemaField;
-  custom: <TDefinition extends FieldTypeDefinition<string, FilterValue>>(
+  custom: <
+    TDefinition extends FieldTypeDefinition<string, FilterValue>,
+  >(
     definition: TDefinition,
     field: CustomFieldConfig<TDefinition>
   ) => SchemaFieldBase<
@@ -649,7 +654,8 @@ const createField = <
     ...field,
     type: definition.type,
     valueKind: definition.valueKind,
-    operators: field.operators ??
+    operators:
+      field.operators ??
       (definition.defaultOperators.length > 0
         ? definition.defaultOperators
         : undefined),

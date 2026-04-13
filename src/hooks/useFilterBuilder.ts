@@ -1,5 +1,8 @@
 import { useMemo } from 'react';
-import { defaultTypeOperationsMap, OperationType } from '../operations';
+import {
+  defaultTypeOperationsMap,
+  OperationType,
+} from '../operations';
 import { useQueryFilters } from './useQueryFilters';
 import {
   createTextLikeController,
@@ -232,7 +235,9 @@ export const useFilterBuilder = <TSchema extends FilterSchema>({
               kind: 'multiselect' as const,
               props: {
                 multiple: true,
-                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => {
+                onChange: (
+                  event: React.ChangeEvent<HTMLSelectElement>
+                ) => {
                   raw.updateConditionValue(
                     condition.id,
                     Array.from(

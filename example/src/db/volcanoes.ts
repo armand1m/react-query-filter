@@ -246,7 +246,8 @@ interface AlaSQLInstance {
 // Module-level init — runs once on first import, safe under Vite HMR
 alasql('DROP TABLE IF EXISTS volcanoes');
 alasql('CREATE TABLE volcanoes');
-(alasql as unknown as AlaSQLInstance).tables['volcanoes'].data = volcanoData;
+(alasql as unknown as AlaSQLInstance).tables['volcanoes'].data =
+  volcanoData;
 
 export function queryVolcanoes(query: FilterQueryResult): Volcano[] {
   try {
