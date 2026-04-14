@@ -201,77 +201,81 @@ const GroupedFilters = ({
 }: {
   group: GroupController<typeof volcanoSchema>;
   depth?: number;
-}) => (
-  <section
-    className="group-shell"
-    style={{ marginLeft: `${depth * 24}px` }}
-  >
-    <header className="group-header">
-      <div className="group-actions">
-        {!group.firstCondition ? (
-          <select
-            className="select select-compact"
-            {...group.combinatorSelectProps()}
-          >
-            {group.combinatorSelectProps().options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        ) : null}
+}) => {
+  const combinatorProps = group.combinatorSelectProps();
 
-        <button
-          aria-label="Add condition"
-          className="button button-icon button-secondary"
-          onClick={() => group.addCondition()}
-          title="Add condition"
-          type="button"
-        >
-          Add Filter +
-        </button>
-        <button
-          aria-label="Add group"
-          className="button button-icon button-secondary"
-          onClick={() => group.addGroup()}
-          title="Add group"
-          type="button"
-        >
-          Add Filter Group ⊞
-        </button>
-        {!group.isRoot ? (
+  return (
+    <section
+      className="group-shell"
+      style={{ marginLeft: `${depth * 24}px` }}
+    >
+      <header className="group-header">
+        <div className="group-actions">
+          {!group.firstCondition ? (
+            <select
+              className="select select-compact"
+              {...combinatorProps}
+            >
+              {combinatorProps.options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
+
           <button
-            aria-label="Remove group"
-            className="button button-icon button-danger"
-            onClick={group.remove}
-            title="Remove group"
+            aria-label="Add condition"
+            className="button button-icon button-secondary"
+            onClick={() => group.addCondition()}
+            title="Add condition"
             type="button"
           >
-            ×
+            Add Filter +
           </button>
-        ) : null}
-      </div>
-    </header>
+          <button
+            aria-label="Add group"
+            className="button button-icon button-secondary"
+            onClick={() => group.addGroup()}
+            title="Add group"
+            type="button"
+          >
+            Add Filter Group ⊞
+          </button>
+          {!group.isRoot ? (
+            <button
+              aria-label="Remove group"
+              className="button button-icon button-danger"
+              onClick={group.remove}
+              title="Remove group"
+              type="button"
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
+      </header>
 
-    <div className="group-children">
-      {group.children.map((child) =>
-        child.kind === 'condition' ? (
-          <ConditionRow
-            key={child.id}
-            condition={child}
-            group={group}
-          />
-        ) : (
-          <GroupedFilters
-            key={child.id}
-            depth={depth + 1}
-            group={child}
-          />
-        )
-      )}
-    </div>
-  </section>
-);
+      <div className="group-children">
+        {group.children.map((child) =>
+          child.kind === 'condition' ? (
+            <ConditionRow
+              key={child.id}
+              condition={child}
+              group={group}
+            />
+          ) : (
+            <GroupedFilters
+              key={child.id}
+              depth={depth + 1}
+              group={child}
+            />
+          )
+        )}
+      </div>
+    </section>
+  );
+};
 
 export const VolcanoExplorer = () => {
   const builder = useFilterBuilder({
