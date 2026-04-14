@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
+import type { ChangeEventHandler } from 'react';
 import {
   defaultTypeOperationsMap,
   OperationType,
 } from '../operations';
 import { useQueryFilters } from './useQueryFilters';
 import {
-  createTextLikeController,
   type ConditionController,
+  type DateValueInputController,
+  type DateTimeValueInputController,
   type FieldDefinition,
   type FilterCondition,
   type FilterConditionDraft,
@@ -16,10 +18,45 @@ import {
   type GroupController,
   type SchemaKey,
   type SchemaField,
+  type TextValueInputController,
+  type TimeValueInputController,
   type UseFilterBuilderOptions,
   type UseFilterBuilderResult,
   type ValueInputController,
 } from '../types';
+
+const createStringListInputProps = (
+  value: string | undefined,
+  onChange: ChangeEventHandler<HTMLInputElement>,
+  suggestions: string[],
+  conditionId: string
+) => ({
+  list:
+    suggestions.length > 0 ? `suggestions-${conditionId}` : undefined,
+  onChange,
+  value: value ?? '',
+});
+
+const createTextLikeController = (
+  kind: 'text' | 'date' | 'datetime-local' | 'time',
+  value: string | undefined,
+  onChange: ChangeEventHandler<HTMLInputElement>,
+  suggestions: string[],
+  conditionId: string
+):
+  | TextValueInputController
+  | DateValueInputController
+  | DateTimeValueInputController
+  | TimeValueInputController => ({
+  kind,
+  props: createStringListInputProps(
+    value,
+    onChange,
+    suggestions,
+    conditionId
+  ),
+  suggestions,
+});
 
 const getSchemaKeys = <TSchema extends FilterSchema>(
   schema: TSchema

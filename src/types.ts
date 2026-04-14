@@ -327,18 +327,6 @@ export interface UseFilterBuilderResult<
   replaceTree: (rootGroup: FilterGroup | FilterGroupDraft) => void;
 }
 
-const createStringListInputProps = (
-  value: string | undefined,
-  onChange: ChangeEventHandler<HTMLInputElement>,
-  suggestions: string[],
-  conditionId: string
-) => ({
-  list:
-    suggestions.length > 0 ? `suggestions-${conditionId}` : undefined,
-  onChange,
-  value: value ?? '',
-});
-
 const defaultIsEmpty = (value: FilterValue | undefined) =>
   value === undefined ||
   (Array.isArray(value) ? value.length === 0 : value === '');
@@ -740,24 +728,3 @@ export const field: FieldFactory = createFieldFactory();
 export const defineFilterSchema = <TSchema extends FilterSchema>(
   schema: TSchema
 ) => schema;
-
-export const createTextLikeController = (
-  kind: 'text' | 'date' | 'datetime-local' | 'time',
-  value: string | undefined,
-  onChange: ChangeEventHandler<HTMLInputElement>,
-  suggestions: string[],
-  conditionId: string
-):
-  | TextValueInputController
-  | DateValueInputController
-  | DateTimeValueInputController
-  | TimeValueInputController => ({
-  kind,
-  props: createStringListInputProps(
-    value,
-    onChange,
-    suggestions,
-    conditionId
-  ),
-  suggestions,
-});
