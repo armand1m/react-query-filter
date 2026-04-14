@@ -1,8 +1,14 @@
 import { useMemo } from 'react';
-import { defaultTypeOperationsMap } from '../operations';
+import type { ChangeEventHandler } from 'react';
+import {
+  defaultTypeOperationsMap,
+  OperationType,
+} from '../operations';
 import { useQueryFilters } from './useQueryFilters';
 import {
   type ConditionController,
+  type DateValueInputController,
+  type DateTimeValueInputController,
   type FieldDefinition,
   type FilterCondition,
   type FilterConditionDraft,
@@ -10,13 +16,47 @@ import {
   type FilterGroupDraft,
   type FilterSchema,
   type GroupController,
-  type SchemaField,
   type SchemaKey,
-  type SchemaValue,
+  type SchemaField,
+  type TextValueInputController,
+  type TimeValueInputController,
   type UseFilterBuilderOptions,
   type UseFilterBuilderResult,
   type ValueInputController,
 } from '../types';
+
+const createStringListInputProps = (
+  value: string | undefined,
+  onChange: ChangeEventHandler<HTMLInputElement>,
+  suggestions: string[],
+  conditionId: string
+) => ({
+  list:
+    suggestions.length > 0 ? `suggestions-${conditionId}` : undefined,
+  onChange,
+  value: value ?? '',
+});
+
+const createTextLikeController = (
+  kind: 'text' | 'date' | 'datetime-local' | 'time',
+  value: string | undefined,
+  onChange: ChangeEventHandler<HTMLInputElement>,
+  suggestions: string[],
+  conditionId: string
+):
+  | TextValueInputController
+  | DateValueInputController
+  | DateTimeValueInputController
+  | TimeValueInputController => ({
+  kind,
+  props: createStringListInputProps(
+    value,
+    onChange,
+    suggestions,
+    conditionId
+  ),
+  suggestions,
+});
 
 const getSchemaKeys = <TSchema extends FilterSchema>(
   schema: TSchema
@@ -29,36 +69,25 @@ const schemaFieldToDefinition = <
   key: TKey,
   schemaField: TSchema[TKey]
 ): FieldDefinition => {
-  switch (schemaField.type) {
-    case 'boolean':
-      return {
-        key,
-        label: schemaField.label,
-        type: 'boolean',
-        suggestions: schemaField.suggestions,
-      };
-    case 'number':
-      return {
-        key,
-        label: schemaField.label,
-        type: 'number',
-        suggestions: schemaField.suggestions,
-      };
-    case 'string':
-    default:
-      return {
-        key,
-        label: schemaField.label,
-        type: 'string',
-        suggestions: schemaField.suggestions,
-      };
-  }
+  return {
+    key,
+    label: schemaField.label,
+    type: schemaField.type,
+    valueKind: schemaField.valueKind,
+    suggestions: schemaField.suggestions,
+    operators: schemaField.operators,
+    options: schemaField.options,
+    meta: schemaField.meta,
+    coerce: schemaField.coerce,
+    isEmpty: schemaField.isEmpty,
+  };
 };
 
 const getDefaultOperators = (schemaField?: SchemaField) =>
   schemaField
     ? (schemaField.operators ??
-      defaultTypeOperationsMap[schemaField.type])
+      defaultTypeOperationsMap[schemaField.type] ??
+      defaultTypeOperationsMap.string)
     : defaultTypeOperationsMap.string;
 
 const createStarterConditionDraft = <TSchema extends FilterSchema>(
@@ -133,8 +162,17 @@ export const useFilterBuilder = <TSchema extends FilterSchema>({
           value: operation,
         }))
       : raw.getAvailableOperations(condition.id);
-    const suggestions = (schemaField?.suggestions ??
-      []) as SchemaValue<TSchema>[];
+    const suggestions = schemaField?.suggestions ?? [];
+    const stringSuggestions = suggestions.filter(
+      (value): value is string => typeof value === 'string'
+    );
+    const numberSuggestions = suggestions.filter(
+      (value): value is number => typeof value === 'number'
+    );
+    const booleanSuggestions = suggestions.filter(
+      (value): value is boolean => typeof value === 'boolean'
+    );
+    const optionList = schemaField?.options ?? [];
 
     const valueInput = (() => {
       if (!raw.shouldRenderValue(condition.id)) {
@@ -143,7 +181,7 @@ export const useFilterBuilder = <TSchema extends FilterSchema>({
         } satisfies ValueInputController;
       }
 
-      switch (schemaField?.type) {
+      switch (schemaField?.valueKind) {
         case 'boolean':
           return {
             kind: 'boolean',
@@ -156,7 +194,7 @@ export const useFilterBuilder = <TSchema extends FilterSchema>({
                 );
               },
             },
-            suggestions: suggestions as boolean[],
+            suggestions: booleanSuggestions,
           } satisfies ValueInputController;
         case 'number':
           return {
@@ -177,17 +215,88 @@ export const useFilterBuilder = <TSchema extends FilterSchema>({
                 );
               },
             },
-            suggestions: suggestions as number[],
+            suggestions: numberSuggestions,
           } satisfies ValueInputController;
-        case 'string':
-        default:
+        case 'date':
+          return createTextLikeController(
+            'date',
+            typeof condition.value === 'string'
+              ? condition.value
+              : undefined,
+            (event) => {
+              raw.updateConditionValue(
+                condition.id,
+                event.currentTarget.value || undefined
+              );
+            },
+            stringSuggestions,
+            condition.id
+          );
+        case 'datetime-local':
+          return createTextLikeController(
+            'datetime-local',
+            typeof condition.value === 'string'
+              ? condition.value
+              : undefined,
+            (event) => {
+              raw.updateConditionValue(
+                condition.id,
+                event.currentTarget.value || undefined
+              );
+            },
+            stringSuggestions,
+            condition.id
+          );
+        case 'time':
+          return createTextLikeController(
+            'time',
+            typeof condition.value === 'string'
+              ? condition.value
+              : undefined,
+            (event) => {
+              raw.updateConditionValue(
+                condition.id,
+                event.currentTarget.value || undefined
+              );
+            },
+            stringSuggestions,
+            condition.id
+          );
+        case 'select': {
+          const isInOperator =
+            condition.operator === OperationType.IN ||
+            condition.operator === OperationType.NOT_IN;
+
+          if (isInOperator) {
+            return {
+              kind: 'multiselect' as const,
+              props: {
+                multiple: true,
+                onChange: (
+                  event: React.ChangeEvent<HTMLSelectElement>
+                ) => {
+                  raw.updateConditionValue(
+                    condition.id,
+                    Array.from(
+                      event.currentTarget.selectedOptions,
+                      (option) => option.value
+                    )
+                  );
+                },
+                value: Array.isArray(condition.value)
+                  ? [...(condition.value as readonly string[])]
+                  : typeof condition.value === 'string'
+                    ? [condition.value]
+                    : [],
+              },
+              options: optionList,
+              suggestions: stringSuggestions,
+            } satisfies ValueInputController;
+          }
+
           return {
-            kind: 'text',
+            kind: 'select',
             props: {
-              list:
-                suggestions.length > 0
-                  ? `suggestions-${condition.id}`
-                  : undefined,
               onChange: (event) => {
                 raw.updateConditionValue(
                   condition.id,
@@ -199,8 +308,47 @@ export const useFilterBuilder = <TSchema extends FilterSchema>({
                   ? condition.value
                   : '',
             },
-            suggestions: suggestions as string[],
+            options: optionList,
+            suggestions: stringSuggestions,
           } satisfies ValueInputController;
+        }
+        case 'multiselect':
+          return {
+            kind: 'multiselect',
+            props: {
+              multiple: true,
+              onChange: (event) => {
+                raw.updateConditionValue(
+                  condition.id,
+                  Array.from(
+                    event.currentTarget.selectedOptions,
+                    (option) => option.value
+                  )
+                );
+              },
+              value: Array.isArray(condition.value)
+                ? [...(condition.value as readonly string[])]
+                : [],
+            },
+            options: optionList,
+            suggestions: stringSuggestions,
+          } satisfies ValueInputController;
+        case 'text':
+        default:
+          return createTextLikeController(
+            'text',
+            typeof condition.value === 'string'
+              ? condition.value
+              : undefined,
+            (event) => {
+              raw.updateConditionValue(
+                condition.id,
+                event.currentTarget.value || undefined
+              );
+            },
+            stringSuggestions,
+            condition.id
+          );
       }
     })();
 

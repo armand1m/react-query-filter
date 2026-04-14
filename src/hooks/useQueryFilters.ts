@@ -23,6 +23,7 @@ import {
   type FilterGroup,
   type FilterGroupDraft,
   type FilterNode,
+  type FilterScalar,
   type FilterValue,
   type SelectOption,
   type UseQueryFiltersOptions,
@@ -154,9 +155,11 @@ export const useQueryFilters = ({
       const condition = getCondition(conditionId);
       const fieldType = condition?.type ?? 'string';
       const operations =
-        typeOperationsMap[fieldType] ?? typeOperationsMap.string;
+        typeOperationsMap[fieldType] ??
+        typeOperationsMap.string ??
+        [];
 
-      return operations.map((operation) =>
+      return operations.map((operation: OperationType) =>
         mapOperationToSelectOption(operation, operationLabels)
       );
     },
@@ -164,7 +167,7 @@ export const useQueryFilters = ({
   );
 
   const getSuggestions = useCallback(
-    (conditionId: string): FilterValue[] => {
+    (conditionId: string): FilterScalar[] => {
       const condition = getCondition(conditionId);
 
       return getFieldDefinition(condition?.field)?.suggestions ?? [];
