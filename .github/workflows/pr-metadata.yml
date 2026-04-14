@@ -28,7 +28,7 @@ jobs:
         continue-on-error: true
         uses: amannn/action-semantic-pull-request@v6
         with:
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          githubToken: ${{ secrets.GH_PAT }}
           types: |
             feat
             fix
