@@ -23,11 +23,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Validate library
-        run: npm run validate
-
       - name: Install example dependencies
         run: npm --prefix example install
+
+      - name: Validate library
+        run: npm run validate
 
       - name: Build example
         run: npm run example:build
